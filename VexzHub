@@ -4,9 +4,6 @@ wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "UI loaded. Bring Mob & Auto Quest fixed.", Duration = 3 });
 wait(0);
 
--- =====================================================
--- SERVICES & REMOTES
--- =====================================================
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -19,7 +16,6 @@ local AttackRemote = Net and Net:WaitForChild("Net", 10) and Net.Net:WaitForChil
 local CommF = ReplicatedStorage:WaitForChild("Remotes", 10) and ReplicatedStorage.Remotes:WaitForChild("CommF_", 10)
 local QuestRemote = ReplicatedStorage:WaitForChild("Remotes", 10) and ReplicatedStorage.Remotes:FindFirstChild("QuestUpdate")
 
--- Hook attack args thật
 local realAttackArgs = nil
 pcall(function()
     local mt = getrawmetatable(game)
@@ -34,9 +30,6 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
--- =====================================================
--- QUEST DATA (từ function CheckQuest của bạn)
--- =====================================================
 local World1 = true
 local World2 = false
 local World3 = false
@@ -115,9 +108,6 @@ local function CheckQuest()
     return questInfo
 end
 
--- =====================================================
--- STATE
--- =====================================================
 local S = {
     farm = false,
     bring = false,
@@ -131,9 +121,6 @@ local S = {
     origGravity = workspace.Gravity,
 }
 
--- =====================================================
--- HELPERS
--- =====================================================
 local function getRoot()
     local c = LocalPlayer.Character
     return c and c:FindFirstChild("HumanoidRootPart")
@@ -234,9 +221,6 @@ local function findMobs(fromPos, maxDist)
     return closest, closestDist, nearby
 end
 
--- =====================================================
--- BRING MOB – Kéo về + Freeze Animation (đứng im)
--- =====================================================
 local function bringMobs()
     local r = getRoot()
     if not r then return end
@@ -252,32 +236,19 @@ local function bringMobs()
         local dist = (r.Position - er.Position).Magnitude
         if dist <= S.bringRange then
             pcall(function()
-                -- Cách 1: Dùng TweenService di chuyển quái về vị trí của mình (an toàn hơn MoveTo)
+                -- Dùng TweenService di chuyển quái về (không freeze hoàn toàn để tránh lỗi dame)
                 local targetPos = r.Position + Vector3.new(math.random(-6,6), 0, math.random(-6,6))
                 local tween = TweenService:Create(er, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
                 tween:Play()
-                -- Freeze animation
-                eh.WalkSpeed = 0
+                -- Giảm tốc độ thay vì freeze hoàn toàn
+                eh.WalkSpeed = 2
                 eh.JumpPower = 0
-                for _, anim in ipairs(eh:GetPlayingAnimationTracks()) do
-                    anim:Stop()
-                end
-                local torso = e:FindFirstChild("Torso") or e:FindFirstChild("UpperTorso")
-                if torso then
-                    torso.Velocity = Vector3.zero
-                    torso.RotVelocity = Vector3.zero
-                    torso.AssemblyLinearVelocity = Vector3.zero
-                    torso.AssemblyAngularVelocity = Vector3.zero
-                end
             end)
             count += 1
         end
     end
 end
 
--- =====================================================
--- AUTO QUEST – Bay đến NPC và tự động nhận quest
--- =====================================================
 local function doAcceptQuest()
     if S.questBusy then return end
     S.questBusy = true
@@ -288,11 +259,9 @@ local function doAcceptQuest()
         return
     end
 
-    -- Bay đến NPC quest
     flyTo(info.CFrameQuest.Position + Vector3.new(0,3,-5), 300)
     task.wait(0.5)
 
-    -- Tìm ProximityPrompt của NPC gần nhất để nhận quest
     local questTaken = false
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("ProximityPrompt") and (v.ActionText or ""):lower():find("quest") then
@@ -312,7 +281,6 @@ local function doAcceptQuest()
         end
     end
 
-    -- Fallback: thử FireServer QuestRemote nếu ProximityPrompt không hoạt động
     if not questTaken then
         pcall(function()
             if QuestRemote then
@@ -325,7 +293,6 @@ local function doAcceptQuest()
 
     task.wait(0.5)
 
-    -- Bay đến vị trí farm quái
     if S.farm then
         flyTo(info.CFrameMon.Position + Vector3.new(0,10,0), 300)
         if S.target and S.target.Parent then
@@ -347,9 +314,6 @@ local function doAcceptQuest()
     S.questBusy = false
 end
 
--- =====================================================
--- MAIN FARM LOOP
--- =====================================================
 task.spawn(function()
     while true do
         task.wait()
@@ -412,7 +376,6 @@ task.spawn(function()
     end
 end)
 
--- Bring Mob loop
 task.spawn(function()
     while true do
         task.wait(2)
@@ -420,7 +383,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Quest loop
 task.spawn(function()
     while true do
         task.wait(30)
@@ -431,7 +393,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- UI TABS (giữ nguyên cấu trúc, kết nối callback)
+-- UI TABS
 -- =====================================================
 ShopTab = Window:AddTab("Shop");
 StatusServerTab = Window:AddTab("Status And Server");
@@ -532,7 +494,7 @@ HoldSkillsSection:AddDropdown("SetDelaySword", { Title = "Set Delay Sword", Valu
 HoldSkillsSection:AddDropdown("SetDelayGun", { Title = "Set Delay Gun", Values = {}, Default = nil, Multi = false, Callback = function(v) end });
 HoldSkillsSection:AddDropdown("SetDelayBloxFruit", { Title = "Set Delay Blox Fruit", Values = {}, Default = nil, Multi = false, Callback = function(v) end });
 
--- ===================== FARMING TAB (Kết nối logic) =====================
+-- ===================== FARMING TAB =====================
 local FarmingSection = FarmingTab:AddLeftGroupbox("Setting Farm");
 FarmingSection:AddDropdown("SelectMethodFarm", { Title = "Select Method Farm", Values = {}, Default = nil, Multi = false, Callback = function(v) end });
 FarmingSection:AddSlider({ Title = "Distance Farm Aura", Min = 100, Max = 1000, Default = 300, Callback = function(v) end });
