@@ -4,6 +4,514 @@ wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
 wait(0);
 
+-- ╔══════════════════════════════════════════════════════╗
+-- ║  LOGIC: Auto Farm + Bring Mob + Auto Quest          ║
+-- ║  Inject vào VexzHub — by Quoc Hoa                  ║
+-- ╚══════════════════════════════════════════════════════╝
+
+local Players             = game:GetService("Players")
+local ReplicatedStorage   = game:GetService("ReplicatedStorage")
+local RunService          = game:GetService("RunService")
+local TweenService        = game:GetService("TweenService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer         = Players.LocalPlayer
+
+-- =====================================================
+-- REMOTES
+-- =====================================================
+local Net = ReplicatedStorage:WaitForChild("Modules", 10)
+local AttackRemote = Net and Net:WaitForChild("Net", 10)
+    and Net.Net:WaitForChild("RE/RegisterHit", 10)
+
+local QuestRemote = ReplicatedStorage:WaitForChild("Remotes", 10)
+    and ReplicatedStorage.Remotes:WaitForChild("QuestUpdate", 10)
+
+-- Hook để lấy attack args thật từ game gốc
+-- Cách duy nhất đảm bảo dame 100% không bị patch
+local realAttackArgs = nil
+pcall(function()
+    local mt  = getrawmetatable(game)
+    local old = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        if getnamecallmethod() == "FireServer" and self == AttackRemote then
+            realAttackArgs = {...}
+        end
+        return old(self, ...)
+    end)
+    setreadonly(mt, true)
+    print("[VexzHub] Hook attack OK — tự đánh 1 lần để lấy args")
+end)
+
+-- =====================================================
+-- LEVEL DATA — Lv 1 → 2800
+-- { minLv, maxLv, questNPC, mobFolder }
+-- questNPC = tên NPC trong workspace.NPCs hoặc workspace
+-- =====================================================
+local QuestData = {
+    -- Sea 1
+    {1,   15,  "Bandit Quest",           "Monkey [Lv. 1]"},
+    {15,  30,  "Bandit Quest",           "Bandit"},
+    {30,  60,  "Gorilla Quest",          "Gorilla"},
+    {60,  90,  "Pirate Quest",           "Pirate"},
+    {90,  120, "Desert Bandit Quest",    "Desert Bandit"},
+    {120, 150, "Snow Bandit Quest",      "Snow Bandit"},
+    {150, 200, "Prisoner Quest",         "Prisoner"},
+    {200, 250, "Sky Bandit Quest",       "Sky Bandit"},
+    {250, 300, "Citizen Quest",          "Citizen"},
+    {300, 375, "Zombie Quest",           "Zombie"},
+    {375, 450, "Zombie Quest",           "Zombie"},
+    {450, 500, "Gladiator Quest",        "Gladiator"},
+    {500, 575, "Magma Ninja Quest",      "Magma Ninja"},
+    {575, 625, "Dark Master Quest",      "Dark Master"},
+    {625, 700, "Dragon Crew Quest",      "Dragon Crew Archer"},
+    {700, 775, "Chocolate Quest",        "Chocolate Bar Battler"},
+    -- Sea 2
+    {775, 850, "Imp Quest",              "Imp"},
+    {850, 925, "Snow Lurker Quest",      "Snow Lurker"},
+    {925, 1000,"Forest Pirate Quest",    "Forest Pirate"},
+    {1000,1050,"Military Quest",         "Military Soldier"},
+    {1050,1100,"Diable Quest",           "Diable"},
+    {1100,1200,"Slasher Quest",          "Deranged Slasher"},
+    {1200,1250,"Sky Stalker Quest",      "Sky Stalker"},
+    {1250,1350,"Royal Soldier Quest",    "Royal Soldier"},
+    {1350,1425,"Sea Soldier Quest",      "Sea Soldier"},
+    {1425,1500,"Islander Quest",         "Ice Cream Islander"},
+    {1500,1575,"Deckhand Quest",         "Ship Deckhand"},
+    -- Sea 3
+    {1575,1650,"Fishman Quest",          "Fishman Raider"},
+    {1650,1700,"Giant Quest",            "Giant Warrior"},
+    {1700,1750,"Marine Quest",           "Marine Lieutenant"},
+    {1750,1800,"Admin Quest",            "Pirate Admin"},
+    {1800,1875,"Millionaire Quest",      "Pirate Millionaire"},
+    {1875,1950,"Corrupt Quest",          "Corrupt Master"},
+    {1950,2025,"Skeleton Quest",         "Reborn Skeleton"},
+    {2025,2100,"Order Quest",            "Order"},
+    {2100,2175,"Adventurer Quest",       "Adventurer"},
+    {2175,2275,"Yeti Quest",             "Yeti"},
+    {2275,2375,"Cursed Quest",           "Cursed Dual Katana User"},
+    {2375,2475,"Warrior Quest",          "Pirate Warrior"},
+    {2475,2575,"Beautiful Quest",        "Beautiful Pirate"},
+    {2575,2650,"Kaiju Quest",            "Kaiju"},
+    {2650,2700,"Poltergeist Quest",      "Poltergeist"},
+    {2700,2800,"Demonic Quest",          "Demonic Soul"},
+}
+
+local function getPlayerLevel()
+    local stats = LocalPlayer:FindFirstChild("leaderstats")
+    if stats then
+        local lv = stats:FindFirstChild("Level") or stats:FindFirstChild("Lv")
+        if lv then return tonumber(lv.Value) or 1 end
+    end
+    return 1
+end
+
+local function getQuestData(lv)
+    for i = #QuestData, 1, -1 do
+        local d = QuestData[i]
+        if lv >= d[1] then
+            return { minLv=d[1], maxLv=d[2], questNPC=d[3], mobName=d[4] }
+        end
+    end
+    return QuestData[1]
+end
+
+-- =====================================================
+-- STATE
+-- =====================================================
+local S = {
+    farm      = false,
+    bring     = false,
+    quest     = false,
+    active    = false,
+    questBusy = false,
+    target    = nil,
+    noFallConn = nil,
+    bringCount = 2,
+    bringRange = 300,
+    origGravity = workspace.Gravity,
+}
+
+-- =====================================================
+-- CHAR HELPERS
+-- =====================================================
+local function getRoot()
+    local c = LocalPlayer.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHum()
+    local c = LocalPlayer.Character
+    return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+local function resetState()
+    S.active = false
+    S.target = nil
+    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
+    workspace.Gravity = S.origGravity
+    local c = LocalPlayer.Character
+    if not c then return end
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if h then
+        h.WalkSpeed = 16; h.JumpPower = 50
+        h.PlatformStand = false; h.AutoRotate = true
+    end
+    local r = c:FindFirstChild("HumanoidRootPart")
+    if r then
+        r.Velocity = Vector3.zero
+        r.AssemblyLinearVelocity = Vector3.zero
+    end
+    for _, p in ipairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then p.CanCollide = true end
+    end
+end
+
+local function lockChar()
+    local c = LocalPlayer.Character
+    if not c then return end
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if h then
+        h.WalkSpeed = 0; h.JumpPower = 0
+        h.PlatformStand = true; h.AutoRotate = false
+    end
+    for _, p in ipairs(c:GetDescendants()) do
+        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
+            p.CanCollide = false
+        end
+    end
+end
+
+-- =====================================================
+-- NOFAIL — ghim trên đầu mob, chống tuột
+-- =====================================================
+local function startNoFall(mob)
+    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
+    workspace.Gravity = 0
+    lockChar()
+
+    S.noFallConn = RunService.RenderStepped:Connect(function()
+        if not S.active then return end
+        local r  = getRoot()
+        if not r or not mob or not mob.Parent then return end
+        local er = mob:FindFirstChild("HumanoidRootPart")
+        local eh = mob:FindFirstChildOfClass("Humanoid")
+        if not er or not eh or eh.Health <= 0 then return end
+        -- Ghim vị trí + reset velocity mỗi frame
+        r.CFrame               = er.CFrame * CFrame.new(0, 10, 0)
+        r.Velocity             = Vector3.zero
+        r.RotVelocity          = Vector3.zero
+        r.AssemblyLinearVelocity  = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
+    end)
+end
+
+-- =====================================================
+-- FLY TO — bay đến vị trí bằng RenderStepped Lerp
+-- Không dùng Tween vì hay bị block bởi NoFall
+-- =====================================================
+local function flyTo(pos, speed)
+    speed = speed or 200
+    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
+    workspace.Gravity = 0
+    lockChar()
+
+    local done = false
+    local conn
+    conn = RunService.RenderStepped:Connect(function(dt)
+        local r = getRoot()
+        if not r then conn:Disconnect(); done = true; return end
+        local diff = pos - r.Position
+        if diff.Magnitude < 4 then
+            r.CFrame = CFrame.new(pos)
+            r.Velocity = Vector3.zero
+            r.AssemblyLinearVelocity = Vector3.zero
+            conn:Disconnect(); done = true; return
+        end
+        local step = math.min(speed * dt, diff.Magnitude)
+        r.CFrame = CFrame.new(r.Position + diff.Unit * step)
+        r.Velocity = Vector3.zero
+        r.AssemblyLinearVelocity = Vector3.zero
+    end)
+
+    local t = 0
+    repeat task.wait(0.05); t += 0.05 until done or t >= 12
+end
+
+-- =====================================================
+-- FIND MOBS — quét folder Enemies
+-- =====================================================
+local function findMobs(fromPos, maxDist)
+    local Enemies = workspace:FindFirstChild("Enemies")
+    if not Enemies then return nil, math.huge, {} end
+
+    local closest, closestDist = nil, maxDist or math.huge
+    local nearby = {}
+
+    for _, e in ipairs(Enemies:GetChildren()) do
+        if not e:IsA("Model") then continue end
+        local eh = e:FindFirstChildOfClass("Humanoid")
+        local er = e:FindFirstChild("HumanoidRootPart")
+        if not eh or eh.Health <= 0 or not er then continue end
+        local dist = (fromPos - er.Position).Magnitude
+        if dist <= (maxDist or math.huge) then
+            table.insert(nearby, { mob = e, dist = dist })
+            if dist < closestDist then
+                closestDist = dist
+                closest = e
+            end
+        end
+    end
+
+    return closest, closestDist, nearby
+end
+
+-- =====================================================
+-- BRING MOB
+-- Dùng Humanoid:MoveTo vì mob NetworkOwner = Server
+-- Client không set CFrame mob được → MoveTo hợp lệ
+-- =====================================================
+local function bringMobs()
+    local r = getRoot()
+    if not r then return end
+    local Enemies = workspace:FindFirstChild("Enemies")
+    if not Enemies then return end
+
+    local count = 0
+    for _, e in ipairs(Enemies:GetChildren()) do
+        if count >= S.bringCount then break end
+        if not e:IsA("Model") then continue end
+        local eh = e:FindFirstChildOfClass("Humanoid")
+        local er = e:FindFirstChild("HumanoidRootPart")
+        if not eh or eh.Health <= 0 or not er then continue end
+        local dist = (r.Position - er.Position).Magnitude
+        if dist <= S.bringRange then
+            pcall(function()
+                eh:MoveTo(r.Position + Vector3.new(
+                    math.random(-4, 4), 0, math.random(-4, 4)
+                ))
+            end)
+            count += 1
+        end
+    end
+end
+
+-- =====================================================
+-- AUTO QUEST
+-- 1. Check level hiện tại
+-- 2. Tìm NPC quest trong workspace
+-- 3. Bay đến NPC
+-- 4. FireServer QuestUpdate
+-- 5. Bay lại mob tiếp tục farm
+-- =====================================================
+local function doAcceptQuest()
+    if S.questBusy then return end
+    S.questBusy = true
+
+    local lv   = getPlayerLevel()
+    local data = getQuestData(lv)
+    print("[VexzHub] Quest: Lv", lv, "→", data.questNPC)
+
+    -- Bước 1: Tìm NPC trong workspace bằng nhiều cách
+    local npcPos = nil
+
+    -- Cách A: Tìm qua ProximityPrompt có ActionText chứa "Quest"
+    for _, v in pairs(workspace:GetDescendants()) do
+        if npcPos then break end
+        if v:IsA("ProximityPrompt") then
+            local txt = (v.ActionText or "") .. (v.ObjectText or "")
+            if txt:lower():find("quest") then
+                local p = v.Parent
+                if p and p:IsA("BasePart") then
+                    npcPos = p.Position
+                    print("[VexzHub] Tìm NPC qua ProximityPrompt:", p:GetFullName())
+                end
+            end
+        end
+    end
+
+    -- Cách B: Tìm NPC folder nếu có
+    if not npcPos then
+        local npcFolder = workspace:FindFirstChild("NPCs")
+            or workspace:FindFirstChild("NPC")
+        if npcFolder then
+            for _, v in pairs(npcFolder:GetDescendants()) do
+                if v:IsA("Model") and v.Name:lower():find("quest") then
+                    local r2 = v:FindFirstChild("HumanoidRootPart") or v.PrimaryPart
+                    if r2 then npcPos = r2.Position; break end
+                end
+            end
+        end
+    end
+
+    -- Bước 2: Bay đến NPC nếu tìm thấy
+    if npcPos then
+        flyTo(npcPos + Vector3.new(0, 3, -5), 300)
+        task.wait(0.5)
+    end
+
+    -- Bước 3: FireServer — thử 2 format phổ biến của Blox Fruits
+    local questOK = false
+    pcall(function()
+        if QuestRemote then
+            -- Format 1: chỉ tên NPC
+            QuestRemote:FireServer(data.questNPC)
+            questOK = true
+        end
+    end)
+    task.wait(0.2)
+    pcall(function()
+        if QuestRemote then
+            -- Format 2: tên NPC + extra
+            QuestRemote:FireServer(data.questNPC, true)
+        end
+    end)
+
+    print("[VexzHub] Quest FireServer:", data.questNPC, "OK:", questOK)
+    task.wait(0.5)
+
+    -- Bước 4: Bay lại mob để tiếp tục farm
+    if S.farm then
+        if S.target and S.target.Parent then
+            local er = S.target:FindFirstChild("HumanoidRootPart")
+            if er then
+                flyTo(er.Position + Vector3.new(0, 10, 0), 300)
+            end
+            S.active = true
+            startNoFall(S.target)
+        else
+            -- Tìm mob mới
+            local r = getRoot()
+            if r then
+                local next = findMobs(r.Position, 2000)
+                if next then
+                    local er = next:FindFirstChild("HumanoidRootPart")
+                    if er then
+                        flyTo(er.Position + Vector3.new(0, 10, 0), 300)
+                        S.target = next
+                        S.active = true
+                        startNoFall(next)
+                    end
+                end
+            end
+        end
+    end
+
+    S.questBusy = false
+end
+
+-- =====================================================
+-- MAIN FARM LOOP
+-- =====================================================
+task.spawn(function()
+    while true do
+        task.wait()
+        if not S.farm or S.questBusy then
+            if S.active and not S.questBusy then resetState() end
+            continue
+        end
+
+        local r = getRoot()
+        local h = getHum()
+        if not r or not h or h.Health <= 0 then
+            if S.active then resetState() end
+            task.wait(0.2); continue
+        end
+
+        local closest, closestDist, nearby = findMobs(r.Position, 2000)
+
+        if closest then
+            if not S.active then
+                S.active = true
+                S.target = closest
+                startNoFall(closest)
+            end
+
+            -- Cập nhật target khi mob chết
+            if S.target then
+                local teh = S.target:FindFirstChildOfClass("Humanoid")
+                if not teh or teh.Health <= 0 or not S.target.Parent then
+                    S.target = closest
+                    startNoFall(closest)
+                end
+            end
+
+            -- Tấn công tất cả mob gần (300 studs)
+            for _, item in ipairs(nearby) do
+                if not S.farm then break end
+                if item.dist > 300 then continue end
+                local mob = item.mob
+                local eh = mob:FindFirstChildOfClass("Humanoid")
+                local er = mob:FindFirstChild("HumanoidRootPart")
+                if not eh or eh.Health <= 0 or not er then continue end
+
+                pcall(function()
+                    if realAttackArgs and #realAttackArgs > 0 then
+                        -- Dùng args thật từ hook — đảm bảo dame
+                        local args = table.clone(realAttackArgs)
+                        args[1] = er
+                        AttackRemote:FireServer(table.unpack(args))
+                    else
+                        -- Fallback khi chưa hook
+                        AttackRemote:FireServer(er, {})
+                    end
+                end)
+            end
+
+            -- VirtualInput click
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,1)
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,1)
+
+        else
+            -- Hết mob → bay đàn tiếp theo
+            if S.active then resetState() end
+            if S.farm and not S.questBusy then
+                local r2 = getRoot()
+                if r2 then
+                    local next, dist = findMobs(r2.Position, 2000)
+                    if next then
+                        local er = next:FindFirstChild("HumanoidRootPart")
+                        if er then
+                            flyTo(er.Position + Vector3.new(0, 10, 0), 300)
+                            S.active = true
+                            S.target = next
+                            startNoFall(next)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Bring mob loop mỗi 2s
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if S.farm and S.bring then bringMobs() end
+    end
+end)
+
+-- Auto quest loop — check level mỗi 30s để tìm quest phù hợp
+task.spawn(function()
+    local lastLv = 0
+    while true do
+        task.wait(30)
+        if not S.farm or not S.quest or S.questBusy then continue end
+        local lv = getPlayerLevel()
+        -- Quest khi level thay đổi hoặc mỗi 30s
+        if lv ~= lastLv or true then
+            lastLv = lv
+            task.spawn(doAcceptQuest)
+        end
+    end
+end)
+
+-- =====================================================
+-- KẾT NỐI VÀO CÁC TOGGLE ĐÃ CÓ TRONG UI
+-- =====================================================
+
+
 -- Tabs
 ShopTab = Window:AddTab("Shop");
 StatusServerTab = Window:AddTab("Status And Server");
@@ -122,14 +630,21 @@ SettingFarmSection:AddSlider({
 SettingFarmSection:AddSlider({
     Title = "Distance Teleport Y",
     Min = 0, Max = 5000, Default = 800,
-    Callback = function(v) end,
+    Callback = function(v)
+        S.bringRange = v
+    end,
 });
 SettingFarmSection:AddSlider({
     Title = "Bring Mob Count",
     Min = 2, Max = 6, Default = 2,
-    Callback = function(v) end,
+    Callback = function(v)
+        S.bringCount = v
+    end,
 });
-SettingFarmSection:AddToggle("BringMob", { Title = "Bring Mob", Default = false, Callback = function(v) end });
+SettingFarmSection:AddToggle("BringMob", { Title = "Bring Mob", Default = false, Callback = function(v)
+    S.bring = v
+    print("[VexzHub] Bring Mob:", v)
+end });
 SettingFarmSection:AddSlider({
     Title = "Speed Tween",
     Min = 350, Max = 1000, Default = 350,
@@ -214,8 +729,39 @@ FarmingSection:AddSlider({
 });
 FarmingSection:AddToggle("IgnoreAttackKatakuri", { Title = "Ignore Attack Katakuri", Default = false, Callback = function(v) end });
 FarmingSection:AddToggle("HopFindKatakuri", { Title = "Hop Find Katakuri", Default = false, Callback = function(v) end });
-FarmingSection:AddToggle("AutoQuestKatakuri", { Title = "Auto Quest [Katakuri/Bone/Tyrant]", Default = false, Callback = function(v) end });
-FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, Callback = function(v) end });
+FarmingSection:AddToggle("AutoQuestKatakuri", { Title = "Auto Quest [Auto Level 1-2800]", Default = false, Callback = function(v)
+    S.quest = v
+    if v and S.farm and not S.questBusy then
+        task.spawn(doAcceptQuest)
+    end
+    print("[VexzHub] Auto Quest:", v)
+end });
+FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, Callback = function(v)
+    S.farm = v
+    if not v and S.active then resetState() end
+    if v then
+        -- Khi bật farm: nhận quest trước nếu autoquest bật
+        if S.quest then task.spawn(doAcceptQuest) end
+        -- Sau đó tìm mob
+        task.spawn(function()
+            task.wait(S.quest and 2 or 0)
+            local r = getRoot()
+            if r then
+                local next = (findMobs(r.Position, 2000))
+                if next then
+                    local er = next:FindFirstChild("HumanoidRootPart")
+                    if er then
+                        flyTo(er.Position + Vector3.new(0,10,0), 300)
+                        S.active = true
+                        S.target = next
+                        startNoFall(next)
+                    end
+                end
+            end
+        end)
+    end
+    print("[VexzHub] Farm:", v)
+end });
 
 local MasteryFarmSection = FarmingTab:AddLeftGroupbox("Mastery Farm");
 MasteryFarmSection:AddDropdown("SelectMethodFarmMastery", {
@@ -241,3 +787,4 @@ FarmingMaterialSection:AddDropdown("SelectMaterial", {
     Callback = function(v) end,
 });
 FarmingMaterialSection:AddToggle("FarmMaterial", { Title = "Farm Material", Default = false, Callback = function(v) end }); 
+ 
