@@ -1,5 +1,5 @@
 Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
-Window = Library:CreateWindow({ Title = "Topi Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://89099965623104" });
+Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://132245162369180" });
 wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
 wait(0);
