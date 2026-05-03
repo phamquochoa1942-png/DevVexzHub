@@ -1,20 +1,22 @@
 Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
 Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://132245162369180" });
 wait(1);
-Library:Notify({ Title = "Vexz Hub", Description = "UI loaded.\nBring Mob + Auto Quest fixed.", Duration = 3 });
+Library:Notify({ Title = "Vexz Hub", Description = "UI loaded. Bring Mob & Auto Quest fixed.", Duration = 3 });
 wait(0);
 
+-- =====================================================
+-- SERVICES & REMOTES
+-- =====================================================
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local LocalPlayer = Players.LocalPlayer
 
 local Net = ReplicatedStorage:WaitForChild("Modules", 10)
 local AttackRemote = Net and Net:WaitForChild("Net", 10) and Net.Net:WaitForChild("RE/RegisterHit", 10)
 local CommF = ReplicatedStorage:WaitForChild("Remotes", 10) and ReplicatedStorage.Remotes:WaitForChild("CommF_", 10)
-
--- Quest Remote: trong Blox Fruits, nhiệm vụ được lấy qua ProximityPrompt hoặc Remote này
 local QuestRemote = ReplicatedStorage:WaitForChild("Remotes", 10) and ReplicatedStorage.Remotes:FindFirstChild("QuestUpdate")
 
 -- Hook attack args thật
@@ -42,9 +44,7 @@ local World3 = false
 local function CheckQuest()
     local MyLevel = LocalPlayer.Data and LocalPlayer.Data.Level and LocalPlayer.Data.Level.Value
     if not MyLevel then return nil end
-
     local questInfo = nil
-
     if World1 then
         if MyLevel >= 1 and MyLevel <= 9 then
             questInfo = {NameQuest = "BanditQuest1", NameMon = "Bandit", CFrameQuest = CFrame.new(1059.37195, 15.4495068, 1550.4231), CFrameMon = CFrame.new(1045.962646484375, 27.00250816345215, 1560.8203125)}
@@ -110,10 +110,8 @@ local function CheckQuest()
             questInfo = {NameQuest = "FountainQuest", NameMon = "Galley Pirate", CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293), CFrameMon = CFrame.new(5551.02197265625, 78.90135192871094, 3930.412841796875)}
         elseif MyLevel >= 650 and MyLevel <= 699 then
             questInfo = {NameQuest = "FountainQuest", NameMon = "Galley Captain", CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293), CFrameMon = CFrame.new(5441.95166015625, 42.50205993652344, 4950.09375)}
-        -- Level 700+ bắt đầu World 2, tạm để World1
         end
     end
-
     return questInfo
 end
 
@@ -254,7 +252,10 @@ local function bringMobs()
         local dist = (r.Position - er.Position).Magnitude
         if dist <= S.bringRange then
             pcall(function()
-                eh:MoveTo(r.Position + Vector3.new(math.random(-6,6), 0, math.random(-6,6)))
+                -- Cách 1: Dùng TweenService di chuyển quái về vị trí của mình (an toàn hơn MoveTo)
+                local targetPos = r.Position + Vector3.new(math.random(-6,6), 0, math.random(-6,6))
+                local tween = TweenService:Create(er, TweenInfo.new(0.3, Enum.EasingStyle.Linear), {CFrame = CFrame.new(targetPos)})
+                tween:Play()
                 -- Freeze animation
                 eh.WalkSpeed = 0
                 eh.JumpPower = 0
@@ -275,7 +276,7 @@ local function bringMobs()
 end
 
 -- =====================================================
--- AUTO QUEST
+-- AUTO QUEST – Bay đến NPC và tự động nhận quest
 -- =====================================================
 local function doAcceptQuest()
     if S.questBusy then return end
@@ -291,18 +292,36 @@ local function doAcceptQuest()
     flyTo(info.CFrameQuest.Position + Vector3.new(0,3,-5), 300)
     task.wait(0.5)
 
-    -- Nhận quest qua Remote
-    pcall(function()
-        if QuestRemote then
-            QuestRemote:FireServer(info.NameQuest)
+    -- Tìm ProximityPrompt của NPC gần nhất để nhận quest
+    local questTaken = false
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("ProximityPrompt") and (v.ActionText or ""):lower():find("quest") then
+            local rootPart = v.Parent
+            if rootPart and rootPart:IsA("BasePart") then
+                local dist = (getRoot().Position - rootPart.Position).Magnitude
+                if dist < 15 then
+                    pcall(function()
+                        fireproximityprompt(v)
+                        task.wait(0.3)
+                        fireproximityprompt(v)
+                        questTaken = true
+                    end)
+                    break
+                end
+            end
         end
-    end)
-    task.wait(0.2)
-    pcall(function()
-        if QuestRemote then
-            QuestRemote:FireServer(info.NameQuest, true)
-        end
-    end)
+    end
+
+    -- Fallback: thử FireServer QuestRemote nếu ProximityPrompt không hoạt động
+    if not questTaken then
+        pcall(function()
+            if QuestRemote then
+                QuestRemote:FireServer(info.NameQuest)
+                task.wait(0.3)
+                QuestRemote:FireServer(info.NameQuest, true)
+            end
+        end)
+    end
 
     task.wait(0.5)
 
