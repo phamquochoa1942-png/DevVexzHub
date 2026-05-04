@@ -1,43 +1,71 @@
---// Global Kill Switch
-_G.SyncCombatEnabled = false
+--// Kill Switch
+_G.FastAttack = false
 
---// Services (localize 1 lần)
+--// Services
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 
---// Remote (cache sẵn, tránh lookup liên tục)
+--// Remote
 local remote = ReplicatedStorage:WaitForChild("Modules")
     :WaitForChild("Net")
-    :WaitForChild("RE/RegisterAttack")
+    :WaitForChild("RE/RegisterHit")
 
 --// Config
-local COOLDOWN = 0.12 -- (0.1 -> 0.15)
-local attackDelay = 0.5
 local attackId = "079baa9c"
+local BASE_CD = 0.1
+local BURST = 2 -- số hit mỗi lần (2 = nhanh + an toàn)
 
---// Hàm chính
-function syncCombatAction()
-    if _G.SyncCombatEnabled then return end -- tránh chạy trùng
+--// Lấy target gần nhất
+local function getTarget()
+    local char = Players.LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     
-    _G.SyncCombatEnabled = true
+    local root = char.HumanoidRootPart
+
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v ~= char then
+            local hum = v:FindFirstChild("Humanoid")
+            local hrp = v:FindFirstChild("HumanoidRootPart")
+
+            if hum and hrp and hum.Health > 0 then
+                if (hrp.Position - root.Position).Magnitude < 25 then
+                    return hrp
+                end
+            end
+        end
+    end
+end
+
+--// START
+function startFastAttack()
+    if _G.FastAttack then return end
+    _G.FastAttack = true
 
     task.spawn(function()
-        while _G.SyncCombatEnabled do
+        while _G.FastAttack do
             
-            --// Gửi Remote (đã tối ưu)
-            remote:FireServer(attackDelay, attackId)
-            
-            --// Giả lập click chuột (Left Click)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-            
-            --// Cooldown chống spam
-            task.wait(COOLDOWN)
+            local target = getTarget()
+
+            if target then
+                local args = {
+                    [1] = target,
+                    [2] = {target},
+                    [3] = nil,
+                    [4] = attackId
+                }
+
+                -- ⚡ burst attack
+                for i = 1, BURST do
+                    remote:FireServer(unpack(args))
+                end
+            end
+
+            task.wait(BASE_CD)
         end
     end)
 end
 
---// Hàm dừng (Kill Switch)
-function stopCombatAction()
-    _G.SyncCombatEnabled = false
+--// STOP
+function stopFastAttack()
+    _G.FastAttack = false
 end
