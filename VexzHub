@@ -1,1 +1,27 @@
-loadstring(game:HttpGet("https://vxezestudio.online/api/scripts/script_98xmzzy2aoj/stream/init"))() 
+ local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- 🔹 Cache sẵn các đối tượng (chỉ tìm 1 lần)
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+local RegisterHitRemote = Net:FindFirstChild("RE/RegisterHit")
+
+local function processNetworkData(targetObject)
+    if not targetObject or not RegisterHitRemote then return end
+
+    task.spawn(function()
+        while true do
+            -- 🔹 Điều kiện dừng: object không tồn tại
+            if not targetObject.Parent then break end
+
+            -- 🔹 Nếu có Humanoid thì kiểm tra Health
+            local hum = targetObject:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health <= 0 then break end
+
+            -- 🔹 Gửi packet
+            RegisterHitRemote:FireServer(targetObject, {}, nil, "079baa9c")
+
+            -- 🔹 Delay hợp lý để tránh tụt FPS
+            task.wait(0.1)
+        end
+    end)
+end
