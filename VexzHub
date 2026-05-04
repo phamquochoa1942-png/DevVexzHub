@@ -1,5 +1,26 @@
 Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
 Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://93384558628762" });
+
+-- Bo tròn logo image trong UI
+task.spawn(function()
+    task.wait(2)
+    pcall(function()
+        local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+        for _, gui in ipairs(pGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                for _, obj in ipairs(gui:GetDescendants()) do
+                    if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                        if not obj:FindFirstChildOfClass("UICorner") then
+                            local uc = Instance.new("UICorner")
+                            uc.CornerRadius = UDim.new(1, 0)
+                            uc.Parent = obj
+                        end
+                    end
+                end
+            end
+        end
+    end)
+end)
 wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
 wait(0);
@@ -18,17 +39,29 @@ local AttackRemote=RS:WaitForChild("Modules",10):WaitForChild("Net",10):WaitForC
 local QuestRemote=RS:WaitForChild("Remotes",10):WaitForChild("QuestUpdate",10)
 local CommF=RS:WaitForChild("Remotes",10):WaitForChild("CommF_",10)
 
--- Hook attack args — tự đánh 1 lần để lấy hash thật
-local RAA=nil
+-- Hook attack args + quest args
+local RAA = nil   -- attack args thật
+local RQA = nil   -- quest args thật
+
 pcall(function()
-    local mt=getrawmetatable(game);local old=mt.__namecall
-    setreadonly(mt,false)
-    mt.__namecall=newcclosure(function(self,...)
-        if getnamecallmethod()=="FireServer"and self==AttackRemote then RAA={...} end
-        return old(self,...)
+    local mt  = getrawmetatable(game)
+    local old = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        if method == "FireServer" then
+            if self == AttackRemote then
+                RAA = {...}
+            elseif self == QuestRemote then
+                -- Hook args thật khi tự nhận quest
+                RQA = {...}
+                print("[VexzHub] Quest args hooked:", ...)
+            end
+        end
+        return old(self, ...)
     end)
-    setreadonly(mt,true)
-    print("[VexzHub] Hook OK")
+    setreadonly(mt, true)
+    print("[VexzHub] Hook OK — tu danh + tu nhan quest 1 lan")
 end)
 
 -- ══════════════════════════════════════════
@@ -183,7 +216,7 @@ local function startNF(mob)
         local er=mob:FindFirstChild("HumanoidRootPart")
         local eh=mob:FindFirstChildOfClass("Humanoid")
         if not er or not eh or eh.Health<=0 then return end
-        r.CFrame=er.CFrame*CFrame.new(0,18,0)
+        r.CFrame=er.CFrame*CFrame.new(0,22,0)
         r.Velocity=Vector3.zero;r.RotVelocity=Vector3.zero
         r.AssemblyLinearVelocity=Vector3.zero;r.AssemblyAngularVelocity=Vector3.zero
     end)
@@ -219,51 +252,153 @@ local function startHitbox()
             local eh=e:FindFirstChildOfClass("Humanoid")
             if not eh or eh.Health<=0 then continue end
             for _,p in ipairs(e:GetDescendants())do
-                if p:IsA("BasePart")and p.Size.Magnitude<30 then
-                    pcall(function()p.Size=Vector3.new(25,25,25)end)
+                if p:IsA("BasePart")and p.Size.Magnitude<50 then
+                    pcall(function()p.Size=Vector3.new(40,40,40)end)
                 end
             end
         end
     end)
 end
 
--- BRING MOB — RenderStepped set CFrame mỗi frame + freeze mob
+-- ══════════════════════════════════════════
+-- BRING MOB v4 — Tween kéo mượt + ghim tại chỗ
+-- Bước 1: Tween mob về dưới chân nhân vật (mượt)
+-- Bước 2: Destroy Animator để mob không tự di chuyển
+-- Bước 3: BodyPosition ghim mob tại chỗ vĩnh viễn
+-- Bước 4: Loop nhẹ check mob còn sống không
+-- ══════════════════════════════════════════
+local TS = game:GetService("TweenService")
+local tweenInfo_bring = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local frozenMobs = {}   -- {mob = lockPos}
+local bringLoop = nil
+
+local function freezeAndLock(mob, lockPos)
+    pcall(function()
+        local eh = mob:FindFirstChildOfClass("Humanoid")
+        local er = mob:FindFirstChild("HumanoidRootPart")
+        if not eh or not er then return end
+
+        -- Bước 2: Destroy Animator — mob đứng im hoàn toàn
+        for _, d in ipairs(mob:GetDescendants()) do
+            if d:IsA("Animator") or d.Name == "Animate" then
+                pcall(function() d:Destroy() end)
+            end
+        end
+        eh.WalkSpeed = 0
+        eh.JumpPower = 0
+        eh.PlatformStand = true
+
+        -- Bước 3: BodyPosition ghim tại lockPos
+        local existing = er:FindFirstChild("VexzLock")
+        if existing then existing:Destroy() end
+
+        local bp = Instance.new("BodyPosition")
+        bp.Name     = "VexzLock"
+        bp.Position = lockPos
+        bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bp.D        = 2000
+        bp.P        = 1e6
+        bp.Parent   = er
+
+        frozenMobs[mob] = lockPos
+    end)
+end
+
+local function unfreezeAll()
+    for mob, _ in pairs(frozenMobs) do
+        pcall(function()
+            if not mob or not mob.Parent then return end
+            local er = mob:FindFirstChild("HumanoidRootPart")
+            if er then
+                local bp = er:FindFirstChild("VexzLock")
+                if bp then bp:Destroy() end
+            end
+            local eh = mob:FindFirstChildOfClass("Humanoid")
+            if eh then
+                eh.WalkSpeed    = 16
+                eh.JumpPower    = 50
+                eh.PlatformStand = false
+            end
+        end)
+    end
+    frozenMobs = {}
+end
+
+local function tweenMobTo(mob, targetPos)
+    -- Bước 1: Tween mob về targetPos mượt mà
+    pcall(function()
+        local er = mob:FindFirstChild("HumanoidRootPart")
+        if not er then return end
+        local tw = TS:Create(er, tweenInfo_bring, {
+            CFrame = CFrame.new(targetPos)
+        })
+        tw:Play()
+        tw.Completed:Connect(function()
+            -- Sau khi tween xong → freeze & lock
+            freezeAndLock(mob, targetPos)
+        end)
+    end)
+end
+
 local function startBring()
-    if S.brc then S.brc:Disconnect();S.brc=nil end
-    S.brc=RunService.RenderStepped:Connect(function()
-        if not S.bring or not S.farm then S.brc:Disconnect();S.brc=nil;return end
-        local r=R();if not r then return end
-        local E=workspace:FindFirstChild("Enemies");if not E then return end
-        local n=0
-        for _,e in ipairs(E:GetChildren())do
-            if n>=S.bc then break end
-            if not e:IsA("Model")then continue end
-            local eh=e:FindFirstChildOfClass("Humanoid")
-            local er=e:FindFirstChild("HumanoidRootPart")
-            if not eh or eh.Health<=0 or not er then continue end
-            local dist=(r.Position-er.Position).Magnitude
-            if dist>3000 or dist<3 then continue end
-            local lp=r.Position+Vector3.new(math.random(-5,5),0,math.random(-5,5))
-            pcall(function()
-                er.CFrame=CFrame.new(lp)
-                er.Velocity=Vector3.zero
-                er.AssemblyLinearVelocity=Vector3.zero
-                er.AssemblyAngularVelocity=Vector3.zero
-                -- Freeze mob: destroy Animator + WalkSpeed=0
-                for _,d in ipairs(e:GetDescendants())do
-                    if d:IsA("Animator")or d.Name=="Animate" then
-                        pcall(function()d:Destroy()end)
+    if S.brc then S.brc:Disconnect(); S.brc = nil end
+
+    -- Loop chính: mỗi 0.5s tween mob mới về chân nhân vật
+    S.brc = RunService.Heartbeat:Connect(function()
+        if not S.bring or not S.farm then
+            S.brc:Disconnect(); S.brc = nil
+            unfreezeAll()
+            return
+        end
+        local r = R(); if not r then return end
+        local E = workspace:FindFirstChild("Enemies"); if not E then return end
+
+        local n = 0
+        for _, e in ipairs(E:GetChildren()) do
+            if n >= S.bc then break end
+            if not e:IsA("Model") then continue end
+            local eh = e:FindFirstChildOfClass("Humanoid")
+            local er = e:FindFirstChild("HumanoidRootPart")
+            if not eh or eh.Health <= 0 or not er then continue end
+
+            local dist = (r.Position - er.Position).Magnitude
+            if dist > 200 or dist < 3 then continue end
+
+            -- Nếu chưa frozen → tween về rồi freeze
+            if not frozenMobs[e] then
+                local lockPos = r.Position + Vector3.new(
+                    math.random(-5, 5), 0, math.random(-5, 5)
+                )
+                tweenMobTo(e, lockPos)
+            else
+                -- Đã frozen: cập nhật BodyPosition theo nhân vật nếu nhân vật di chuyển
+                pcall(function()
+                    local lockPos = r.Position + Vector3.new(
+                        math.random(-3, 3), 0, math.random(-3, 3)
+                    )
+                    local bp = er:FindFirstChild("VexzLock")
+                    if bp then
+                        bp.Position = lockPos
+                        frozenMobs[e] = lockPos
                     end
-                end
-                eh.WalkSpeed=0;eh.JumpPower=0
-            end)
-            n+=1
+                end)
+            end
+            n += 1
+        end
+
+        -- Cleanup mob chết
+        for mob, _ in pairs(frozenMobs) do
+            local eh = mob:FindFirstChildOfClass("Humanoid")
+            if not mob.Parent or not eh or eh.Health <= 0 then
+                frozenMobs[mob] = nil
+            end
         end
     end)
 end
 
 local function stopBring()
-    if S.brc then S.brc:Disconnect();S.brc=nil end
+    if S.brc then S.brc:Disconnect(); S.brc = nil end
+    unfreezeAll()
 end
 
 -- AUTO QUEST — teleport đến CFrameQuest thật, FireServer, bay đến CFrameMon
@@ -299,13 +434,35 @@ local function doQuest()
     task.wait(0.8)
 
     -- FireServer nhận quest
-    pcall(function()
-        if QuestRemote then
-            QuestRemote:FireServer(d.questName,true)
-            print("[VexzHub] Quest OK:",d.questName)
+    -- Ưu tiên dùng args thật từ hook (chắc chắn nhất)
+    -- Nếu chưa hook → thử tất cả format phổ biến
+    if RQA and #RQA > 0 then
+        -- Dùng args thật, chỉ thay questName
+        pcall(function()
+            local args = table.clone(RQA)
+            args[1] = d.questName
+            QuestRemote:FireServer(table.unpack(args))
+            print("[VexzHub] Quest dùng real args:", d.questName)
+        end)
+        task.wait(0.2)
+    else
+        -- Chưa hook → thử tuần tự các format
+        print("[VexzHub] Quest thử fallback formats:", d.questName)
+        local formats = {
+            {d.questName},
+            {d.questName, true},
+            {d.questName, false},
+            {d.questName, 1},
+            {d.questName, 0},
+        }
+        for _, args in ipairs(formats) do
+            pcall(function()
+                QuestRemote:FireServer(table.unpack(args))
+            end)
+            task.wait(0.15)
         end
-    end)
-    task.wait(0.4)
+    end
+    task.wait(0.3)
 
     -- Teleport đến vị trí mob (CFrameMon chính xác)
     r=R()
@@ -398,8 +555,11 @@ task.spawn(function()
                     end
                 end)
             end
-            VIM:SendMouseButtonEvent(0,0,0,true,game,1)
-            VIM:SendMouseButtonEvent(0,0,0,false,game,1)
+            -- Fast attack: click 3 lần mỗi frame
+            for _=1,3 do
+                VIM:SendMouseButtonEvent(0,0,0,true,game,1)
+                VIM:SendMouseButtonEvent(0,0,0,false,game,1)
+            end
         else
             if S.active then resetChar() end
             if S.farm and not S.qBusy then
@@ -409,7 +569,7 @@ task.spawn(function()
                     if nx then
                         local er=nx:FindFirstChild("HumanoidRootPart")
                         if er then
-                            flyTo(er.Position+Vector3.new(0,18,0),300)
+                            flyTo(er.Position+Vector3.new(0,22,0),300)
                             S.active=true;S.target=nx;startNF(nx)
                         end
                     end
@@ -464,7 +624,7 @@ SettingFarmSection:AddSlider({
     end,
 });
 SettingFarmSection:AddSlider({
-    Title = "Bring Mob Count",
+    Title = "Bring Mob Count (200 studs)",
     Min = 1, Max = 30, Default = 5,
     Callback = function(v) S.bc = v end,
 });
@@ -578,7 +738,7 @@ FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, C
                 if nx then
                     local er=nx:FindFirstChild("HumanoidRootPart")
                     if er then
-                        flyTo(er.Position+Vector3.new(0,18,0),300)
+                        flyTo(er.Position+Vector3.new(0,22,0),300)
                         S.active=true;S.target=nx;startNF(nx)
                     end
                 end
