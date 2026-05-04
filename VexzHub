@@ -1,71 +1,69 @@
---// Kill Switch
-_G.FastAttack = false
+_G.FastAttackAll = true
 
---// Services
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+task.spawn(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local VirtualInputManager = game:GetService("VirtualInputManager")
 
---// Remote
-local remote = ReplicatedStorage:WaitForChild("Modules")
-    :WaitForChild("Net")
-    :WaitForChild("RE/RegisterHit")
+    local LocalPlayer = Players.LocalPlayer
+    local AttackRemote = ReplicatedStorage:WaitForChild("Modules")
+        :WaitForChild("Net")
+        :WaitForChild("RE/RegisterHit")
 
---// Config
-local attackId = "079baa9c"
-local BASE_CD = 0.1
-local BURST = 2 -- số hit mỗi lần (2 = nhanh + an toàn)
+    local BURST = 3 -- 🔥 tăng hit mỗi lần
+    local COOLDOWN = 0.06 -- 🔥 nhanh hơn
 
---// Lấy target gần nhất
-local function getTarget()
-    local char = Players.LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    
-    local root = char.HumanoidRootPart
-
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Model") and v ~= char then
-            local hum = v:FindFirstChild("Humanoid")
-            local hrp = v:FindFirstChild("HumanoidRootPart")
-
-            if hum and hrp and hum.Health > 0 then
-                if (hrp.Position - root.Position).Magnitude < 25 then
-                    return hrp
-                end
-            end
-        end
-    end
-end
-
---// START
-function startFastAttack()
-    if _G.FastAttack then return end
-    _G.FastAttack = true
-
+    -- click nhanh nhưng vừa đủ
     task.spawn(function()
-        while _G.FastAttack do
-            
-            local target = getTarget()
-
-            if target then
-                local args = {
-                    [1] = target,
-                    [2] = {target},
-                    [3] = nil,
-                    [4] = attackId
-                }
-
-                -- ⚡ burst attack
-                for i = 1, BURST do
-                    remote:FireServer(unpack(args))
-                end
-            end
-
-            task.wait(BASE_CD)
+        while _G.FastAttackAll do
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
+            task.wait(0.03)
         end
     end)
-end
 
---// STOP
-function stopFastAttack()
-    _G.FastAttack = false
-end
+    while _G.FastAttackAll do
+        local Character = LocalPlayer.Character
+        if not Character then task.wait(0.1) continue end
+        
+        local Root = Character:FindFirstChild("HumanoidRootPart")
+        if not Root then task.wait(0.1) continue end
+
+        local Enemies = workspace:FindFirstChild("Enemies")
+        if not Enemies then task.wait(0.1) continue end
+
+        for _, Enemy in ipairs(Enemies:GetChildren()) do
+            if not _G.FastAttackAll then break end
+            
+            local Hum = Enemy:FindFirstChildOfClass("Humanoid")
+            local HRP = Enemy:FindFirstChild("HumanoidRootPart")
+
+            if Hum and HRP and Hum.Health > 0 then
+                local dist = (Root.Position - HRP.Position).Magnitude
+
+                if dist < 150 then
+                    
+                    -- 🔥 chọn part tốt hơn
+                    local TargetPart =
+                        Enemy:FindFirstChild("Head") or
+                        Enemy:FindFirstChild("HumanoidRootPart")
+
+                    local args = {
+                        [1] = TargetPart,
+                        [2] = {TargetPart}, -- ✅ FIX QUAN TRỌNG
+                        [3] = nil,
+                        [4] = "079996f9"
+                    }
+
+                    -- 🔥 BURST HIT
+                    for i = 1, BURST do
+                        AttackRemote:FireServer(unpack(args))
+                    end
+                end
+            end
+        end
+
+        task.wait(COOLDOWN)
+    end
+end)
