@@ -1,27 +1,43 @@
- local ReplicatedStorage = game:GetService("ReplicatedStorage")
+--// Global Kill Switch
+_G.SyncCombatEnabled = false
 
--- 🔹 Cache sẵn các đối tượng (chỉ tìm 1 lần)
-local Modules = ReplicatedStorage:WaitForChild("Modules")
-local Net = Modules:WaitForChild("Net")
-local RegisterHitRemote = Net:FindFirstChild("RE/RegisterHit")
+--// Services (localize 1 lần)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-local function processNetworkData(targetObject)
-    if not targetObject or not RegisterHitRemote then return end
+--// Remote (cache sẵn, tránh lookup liên tục)
+local remote = ReplicatedStorage:WaitForChild("Modules")
+    :WaitForChild("Net")
+    :WaitForChild("RE/RegisterAttack")
+
+--// Config
+local COOLDOWN = 0.12 -- (0.1 -> 0.15)
+local attackDelay = 0.5
+local attackId = "079baa9c"
+
+--// Hàm chính
+function syncCombatAction()
+    if _G.SyncCombatEnabled then return end -- tránh chạy trùng
+    
+    _G.SyncCombatEnabled = true
 
     task.spawn(function()
-        while true do
-            -- 🔹 Điều kiện dừng: object không tồn tại
-            if not targetObject.Parent then break end
-
-            -- 🔹 Nếu có Humanoid thì kiểm tra Health
-            local hum = targetObject:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health <= 0 then break end
-
-            -- 🔹 Gửi packet
-            RegisterHitRemote:FireServer(targetObject, {}, nil, "079baa9c")
-
-            -- 🔹 Delay hợp lý để tránh tụt FPS
-            task.wait(0.1)
+        while _G.SyncCombatEnabled do
+            
+            --// Gửi Remote (đã tối ưu)
+            remote:FireServer(attackDelay, attackId)
+            
+            --// Giả lập click chuột (Left Click)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            
+            --// Cooldown chống spam
+            task.wait(COOLDOWN)
         end
     end)
+end
+
+--// Hàm dừng (Kill Switch)
+function stopCombatAction()
+    _G.SyncCombatEnabled = false
 end
