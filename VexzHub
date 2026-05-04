@@ -1,5 +1,5 @@
 Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
-Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://93384558628762" });
+Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://132245162369180" });
 
 -- Bo tròn logo image trong UI
 task.spawn(function()
@@ -25,6 +25,13 @@ wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
 wait(0);
 
+-- ══════════════════════════════════════════
+-- TẠO TAB
+-- ══════════════════════════════════════════
+local SettingFarmTab = Window:AddTab({ Title = "Setting Farm", Icon = "settings" })
+local HoldSelectSkillTab = Window:AddTab({ Title = "Hold & Select Skill", Icon = "sword" })
+local FarmingTab = Window:AddTab({ Title = "Farming", Icon = "target" })
+
 -- ╔══════════════════════════════════════════╗
 -- ║  VexzHub Logic v5.0 — by Quoc Hoa      ║
 -- ╚══════════════════════════════════════════╝
@@ -40,8 +47,8 @@ local QuestRemote=RS:WaitForChild("Remotes",10):WaitForChild("QuestUpdate",10)
 local CommF=RS:WaitForChild("Remotes",10):WaitForChild("CommF_",10)
 
 -- Hook attack args + quest args
-local RAA = nil   -- attack args thật
-local RQA = nil   -- quest args thật
+local RAA = nil
+local RQA = nil
 
 pcall(function()
     local mt  = getrawmetatable(game)
@@ -53,7 +60,6 @@ pcall(function()
             if self == AttackRemote then
                 RAA = {...}
             elseif self == QuestRemote then
-                -- Hook args thật khi tự nhận quest
                 RQA = {...}
                 print("[VexzHub] Quest args hooked:", ...)
             end
@@ -61,15 +67,13 @@ pcall(function()
         return old(self, ...)
     end)
     setreadonly(mt, true)
-    print("[VexzHub] Hook OK — tu danh + tu nhan quest 1 lan")
+    print("[VexzHub] Hook OK")
 end)
 
 -- ══════════════════════════════════════════
--- QUEST DATA THẬT — CFrame chính xác 100%
--- { minLv, maxLv, NameQuest, CFrameQuest, CFrameMon, entrance }
+-- QUEST DATA
 -- ══════════════════════════════════════════
 local QD={
--- SEA 1
 {1,9,"BanditQuest1",CFrame.new(1059.37195,15.4495068,1550.4231,0.939700544,-0,-0.341998369,0,1,-0,0.341998369,0,0.939700544),CFrame.new(1045.962646,27.0025081,1560.8203),nil},
 {10,14,"JungleQuest",CFrame.new(-1598.08911,35.5501175,153.377838,0,0,1,0,1,-0,-1,0,0),CFrame.new(-1448.518066,67.853012,11.465796),nil},
 {15,29,"JungleQuest",CFrame.new(-1598.08911,35.5501175,153.377838,0,0,1,0,1,-0,-1,0,0),CFrame.new(-1129.883666,40.463546,-525.423706),nil},
@@ -96,7 +100,6 @@ local QD={
 {550,624,"SkyExp2Quest",CFrame.new(-7906.81592,5634.6626,-1411.99194,0,0,-1,0,1,0,1,0,0),CFrame.new(-7836.753417,5645.664062,-1790.623657),nil},
 {625,649,"FountainQuest",CFrame.new(5259.81982,37.3500175,4050.0293,0.087131381,0,0.996196866,0,1,0,-0.996196866,0,0.087131381),CFrame.new(5551.021972,78.901351,3930.412841),nil},
 {650,699,"FountainQuest",CFrame.new(5259.81982,37.3500175,4050.0293,0.087131381,0,0.996196866,0,1,0,-0.996196866,0,0.087131381),CFrame.new(5441.951660,42.502059,4950.09375),nil},
--- SEA 2
 {700,724,"Area1Quest",CFrame.new(-429.543518,71.7699966,1836.18188,-0.22495985,0,-0.974368095,0,1,0,0.974368095,0,-0.22495985),CFrame.new(-728.326721,52.779319,2345.770507),nil},
 {725,774,"Area1Quest",CFrame.new(-429.543518,71.7699966,1836.18188,-0.22495985,0,-0.974368095,0,1,0,0.974368095,0,-0.22495985),CFrame.new(-1004.324401,80.158866,1424.619384),nil},
 {775,799,"Area2Quest",CFrame.new(638.43811,71.769989,918.282898,0.139203906,0,0.99026376,0,1,0,-0.99026376,0,0.139203906),CFrame.new(1068.664306,137.614288,1322.106079),nil},
@@ -119,7 +122,6 @@ local QD={
 {1375,1424,"FrostQuest",CFrame.new(5667.6582,26.7997818,-6486.08984,-0.933587909,0,-0.358349502,0,1,0,0.358349502,0,-0.933587909),CFrame.new(5407.073730,69.194374,-6880.880371),nil},
 {1425,1449,"ForgottenQuest",CFrame.new(-3054.44458,235.544281,-10142.8193,0.990270376,-0,-0.13915664,0,1,-0,0.13915664,0,0.990270376),CFrame.new(-3028.223632,64.674514,-9775.426757),nil},
 {1450,1499,"ForgottenQuest",CFrame.new(-3054,240,-10146),CFrame.new(-3291,252,-10501),nil},
--- SEA 3
 {1500,1524,"PiratePortQuest",CFrame.new(-290.074677,42.9034653,5581.58984,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-245.996383,47.306152,5584.100585),nil},
 {1525,1574,"PiratePortQuest",CFrame.new(-290.074677,42.9034653,5581.58984,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-187.330154,86.239875,6013.513671),nil},
 {1575,1599,"DragonCrewQuest",CFrame.new(6738.96142578125,127.81645965576172,-713.511474609375),CFrame.new(6920.714355,56.155971,-942.504455),nil},
@@ -206,7 +208,7 @@ local function lockChar()
     end
 end
 
--- NOFAIL Y+18
+-- NOFAIL Y+22
 local function startNF(mob)
     if S.nfc then S.nfc:Disconnect();S.nfc=nil end
     workspace.Gravity=0;lockChar()
@@ -222,7 +224,7 @@ local function startNF(mob)
     end)
 end
 
--- FLY TO — smooth lerp
+-- FLY TO
 local function flyTo(pos,spd)
     spd=spd or 300
     if S.nfc then S.nfc:Disconnect();S.nfc=nil end
@@ -241,7 +243,7 @@ local function flyTo(pos,spd)
     local t=0;repeat task.wait(0.05);t+=0.05 until done or t>=15
 end
 
--- HITBOX EXPANDER — mở rộng hitbox mob để đánh từ trên cao
+-- HITBOX EXPANDER
 local function startHitbox()
     if S.htc then return end
     S.htc=RunService.Heartbeat:Connect(function()
@@ -260,148 +262,91 @@ local function startHitbox()
     end)
 end
 
--- ══════════════════════════════════════════
--- BRING MOB v4 — Tween kéo mượt + ghim tại chỗ
--- Bước 1: Tween mob về dưới chân nhân vật (mượt)
--- Bước 2: Destroy Animator để mob không tự di chuyển
--- Bước 3: BodyPosition ghim mob tại chỗ vĩnh viễn
--- Bước 4: Loop nhẹ check mob còn sống không
--- ══════════════════════════════════════════
-local TS = game:GetService("TweenService")
-local tweenInfo_bring = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local frozenMobs = {}   -- {mob = lockPos}
-local bringLoop = nil
+-- BRING MOB
+local TS=game:GetService("TweenService")
+local tweenInfo_bring=TweenInfo.new(0.4,Enum.EasingStyle.Quad,Enum.EasingDirection.Out)
+local frozenMobs={}
 
-local function freezeAndLock(mob, lockPos)
+local function freezeAndLock(mob,lockPos)
     pcall(function()
-        local eh = mob:FindFirstChildOfClass("Humanoid")
-        local er = mob:FindFirstChild("HumanoidRootPart")
+        local eh=mob:FindFirstChildOfClass("Humanoid")
+        local er=mob:FindFirstChild("HumanoidRootPart")
         if not eh or not er then return end
-
-        -- Bước 2: Destroy Animator — mob đứng im hoàn toàn
-        for _, d in ipairs(mob:GetDescendants()) do
-            if d:IsA("Animator") or d.Name == "Animate" then
-                pcall(function() d:Destroy() end)
-            end
+        for _,d in ipairs(mob:GetDescendants())do
+            if d:IsA("Animator")or d.Name=="Animate"then pcall(function()d:Destroy()end)end
         end
-        eh.WalkSpeed = 0
-        eh.JumpPower = 0
-        eh.PlatformStand = true
-
-        -- Bước 3: BodyPosition ghim tại lockPos
-        local existing = er:FindFirstChild("VexzLock")
-        if existing then existing:Destroy() end
-
-        local bp = Instance.new("BodyPosition")
-        bp.Name     = "VexzLock"
-        bp.Position = lockPos
-        bp.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        bp.D        = 2000
-        bp.P        = 1e6
-        bp.Parent   = er
-
-        frozenMobs[mob] = lockPos
+        eh.WalkSpeed=0;eh.JumpPower=0;eh.PlatformStand=true
+        local existing=er:FindFirstChild("VexzLock")
+        if existing then existing:Destroy()end
+        local bp=Instance.new("BodyPosition")
+        bp.Name="VexzLock";bp.Position=lockPos;bp.MaxForce=Vector3.new(1e9,1e9,1e9);bp.D=2000;bp.P=1e6;bp.Parent=er
+        frozenMobs[mob]=lockPos
     end)
 end
 
 local function unfreezeAll()
-    for mob, _ in pairs(frozenMobs) do
+    for mob,_ in pairs(frozenMobs)do
         pcall(function()
             if not mob or not mob.Parent then return end
-            local er = mob:FindFirstChild("HumanoidRootPart")
-            if er then
-                local bp = er:FindFirstChild("VexzLock")
-                if bp then bp:Destroy() end
-            end
-            local eh = mob:FindFirstChildOfClass("Humanoid")
-            if eh then
-                eh.WalkSpeed    = 16
-                eh.JumpPower    = 50
-                eh.PlatformStand = false
-            end
+            local er=mob:FindFirstChild("HumanoidRootPart")
+            if er then local bp=er:FindFirstChild("VexzLock");if bp then bp:Destroy()end end
+            local eh=mob:FindFirstChildOfClass("Humanoid")
+            if eh then eh.WalkSpeed=16;eh.JumpPower=50;eh.PlatformStand=false end
         end)
     end
-    frozenMobs = {}
+    frozenMobs={}
 end
 
-local function tweenMobTo(mob, targetPos)
-    -- Bước 1: Tween mob về targetPos mượt mà
+local function tweenMobTo(mob,targetPos)
     pcall(function()
-        local er = mob:FindFirstChild("HumanoidRootPart")
+        local er=mob:FindFirstChild("HumanoidRootPart")
         if not er then return end
-        local tw = TS:Create(er, tweenInfo_bring, {
-            CFrame = CFrame.new(targetPos)
-        })
+        local tw=TS:Create(er,tweenInfo_bring,{CFrame=CFrame.new(targetPos)})
         tw:Play()
-        tw.Completed:Connect(function()
-            -- Sau khi tween xong → freeze & lock
-            freezeAndLock(mob, targetPos)
-        end)
+        tw.Completed:Connect(function()freezeAndLock(mob,targetPos)end)
     end)
 end
 
 local function startBring()
-    if S.brc then S.brc:Disconnect(); S.brc = nil end
-
-    -- Loop chính: mỗi 0.5s tween mob mới về chân nhân vật
-    S.brc = RunService.Heartbeat:Connect(function()
-        if not S.bring or not S.farm then
-            S.brc:Disconnect(); S.brc = nil
-            unfreezeAll()
-            return
-        end
-        local r = R(); if not r then return end
-        local E = workspace:FindFirstChild("Enemies"); if not E then return end
-
-        local n = 0
-        for _, e in ipairs(E:GetChildren()) do
-            if n >= S.bc then break end
-            if not e:IsA("Model") then continue end
-            local eh = e:FindFirstChildOfClass("Humanoid")
-            local er = e:FindFirstChild("HumanoidRootPart")
-            if not eh or eh.Health <= 0 or not er then continue end
-
-            local dist = (r.Position - er.Position).Magnitude
-            if dist > 200 or dist < 3 then continue end
-
-            -- Nếu chưa frozen → tween về rồi freeze
-            if not frozenMobs[e] then
-                local lockPos = r.Position + Vector3.new(
-                    math.random(-5, 5), 0, math.random(-5, 5)
-                )
-                tweenMobTo(e, lockPos)
+    if S.brc then S.brc:Disconnect();S.brc=nil end
+    S.brc=RunService.Heartbeat:Connect(function()
+        if not S.bring or not S.farm then S.brc:Disconnect();S.brc=nil;unfreezeAll();return end
+        local r=R();if not r then return end
+        local E=workspace:FindFirstChild("Enemies");if not E then return end
+        local n=0
+        for _,e in ipairs(E:GetChildren())do
+            if n>=S.bc then break end
+            if not e:IsA("Model")then continue end
+            local eh=e:FindFirstChildOfClass("Humanoid")
+            local er=e:FindFirstChild("HumanoidRootPart")
+            if not eh or eh.Health<=0 or not er then continue end
+            local dist=(r.Position-er.Position).Magnitude
+            if dist>200 or dist<3 then continue end
+            if not frozenMobs[e]then
+                local lockPos=r.Position+Vector3.new(math.random(-5,5),0,math.random(-5,5))
+                tweenMobTo(e,lockPos)
             else
-                -- Đã frozen: cập nhật BodyPosition theo nhân vật nếu nhân vật di chuyển
                 pcall(function()
-                    local lockPos = r.Position + Vector3.new(
-                        math.random(-3, 3), 0, math.random(-3, 3)
-                    )
-                    local bp = er:FindFirstChild("VexzLock")
-                    if bp then
-                        bp.Position = lockPos
-                        frozenMobs[e] = lockPos
-                    end
+                    local lockPos=r.Position+Vector3.new(math.random(-3,3),0,math.random(-3,3))
+                    local bp=er:FindFirstChild("VexzLock")
+                    if bp then bp.Position=lockPos;frozenMobs[e]=lockPos end
                 end)
             end
-            n += 1
+            n+=1
         end
-
-        -- Cleanup mob chết
-        for mob, _ in pairs(frozenMobs) do
-            local eh = mob:FindFirstChildOfClass("Humanoid")
-            if not mob.Parent or not eh or eh.Health <= 0 then
-                frozenMobs[mob] = nil
-            end
+        for mob,_ in pairs(frozenMobs)do
+            local eh=mob:FindFirstChildOfClass("Humanoid")
+            if not mob.Parent or not eh or eh.Health<=0 then frozenMobs[mob]=nil end
         end
     end)
 end
 
 local function stopBring()
-    if S.brc then S.brc:Disconnect(); S.brc = nil end
+    if S.brc then S.brc:Disconnect();S.brc=nil end
     unfreezeAll()
 end
 
--- AUTO QUEST — teleport đến CFrameQuest thật, FireServer, bay đến CFrameMon
+-- AUTO QUEST
 local function doQuest()
     if S.qBusy then return end
     S.qBusy=true
@@ -409,92 +354,50 @@ local function doQuest()
     local d=getQD(lv)
     print("[VexzHub] Quest Lv",lv,"->",d.questName)
     local r=R();if not r then S.qBusy=false;return end
-
-    -- Xử lý entrance nếu cần
     local dist=(r.Position-d.cfQ.Position).Magnitude
     if dist>5000 and d.ent then
         if d.ent=="sub" then
-            -- Teleport đến tàu ngầm
             pcall(function()r.CFrame=CFrame.new(-16269.7041,25.2288494,1373.65955,0.997390985,1.47309942e-09,-0.0721890926,-4.00651912e-09,0.99999994,-2.51183763e-09,0.0721890852,5.75363091e-10,0.997390926)end)
             task.wait(2)
-            pcall(function()
-                local rf=RS.Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak")
-                if rf then rf:InvokeServer("TravelToSubmergedIsland") end
-            end)
+            pcall(function()local rf=RS.Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak");if rf then rf:InvokeServer("TravelToSubmergedIsland")end end)
             task.wait(3)
         elseif typeof(d.ent)=="Vector3" then
             pcall(function()CommF:InvokeServer("requestEntrance",d.ent)end)
             task.wait(2)
         end
     end
-
-    -- Teleport đến NPC (CFrameQuest chính xác)
     r=R()
-    if r then pcall(function()r.CFrame=d.cfQ end) end
+    if r then pcall(function()r.CFrame=d.cfQ end)end
     task.wait(0.8)
-
-    -- FireServer nhận quest
-    -- Ưu tiên dùng args thật từ hook (chắc chắn nhất)
-    -- Nếu chưa hook → thử tất cả format phổ biến
-    if RQA and #RQA > 0 then
-        -- Dùng args thật, chỉ thay questName
-        pcall(function()
-            local args = table.clone(RQA)
-            args[1] = d.questName
-            QuestRemote:FireServer(table.unpack(args))
-            print("[VexzHub] Quest dùng real args:", d.questName)
-        end)
+    if RQA and #RQA>0 then
+        pcall(function()local args=table.clone(RQA);args[1]=d.questName;QuestRemote:FireServer(table.unpack(args));print("[VexzHub] Quest dùng real args:",d.questName)end)
         task.wait(0.2)
     else
-        -- Chưa hook → thử tuần tự các format
-        print("[VexzHub] Quest thử fallback formats:", d.questName)
-        local formats = {
-            {d.questName},
-            {d.questName, true},
-            {d.questName, false},
-            {d.questName, 1},
-            {d.questName, 0},
-        }
-        for _, args in ipairs(formats) do
-            pcall(function()
-                QuestRemote:FireServer(table.unpack(args))
-            end)
-            task.wait(0.15)
-        end
+        print("[VexzHub] Quest thử fallback formats:",d.questName)
+        local formats={{d.questName},{d.questName,true},{d.questName,false},{d.questName,1},{d.questName,0}}
+        for _,args in ipairs(formats)do pcall(function()QuestRemote:FireServer(table.unpack(args))end);task.wait(0.15)end
     end
     task.wait(0.3)
-
-    -- Teleport đến vị trí mob (CFrameMon chính xác)
     r=R()
-    if r then
-        pcall(function()r.CFrame=d.cfM end)
-    end
+    if r then pcall(function()r.CFrame=d.cfM end)end
     task.wait(0.5)
-
-    -- Tìm và bật farm lại
     if S.farm then
         local E=workspace:FindFirstChild("Enemies")
         if E then
             r=R()
             if r then
-                -- Tìm mob gần nhất tại vị trí quest
                 local best,bestDist=nil,math.huge
                 for _,e in ipairs(E:GetChildren())do
                     if not e:IsA("Model")then continue end
-                    local eh=e:FindFirstChildOfClass("Humanoid")
-                    local er=e:FindFirstChild("HumanoidRootPart")
+                    local eh=e:FindFirstChildOfClass("Humanoid");local er=e:FindFirstChild("HumanoidRootPart")
                     if not eh or eh.Health<=0 or not er then continue end
                     local dd=(r.Position-er.Position).Magnitude
                     if dd<bestDist then bestDist=dd;best=e end
                 end
-                if best then
-                    S.target=best;S.active=true;startNF(best)
-                    print("[VexzHub] Farm lại:",best.Name)
-                end
+                if best then S.target=best;S.active=true;startNF(best);print("[VexzHub] Farm lại:",best.Name)end
             end
         end
     end
-
     S.qBusy=false
     print("[VexzHub] Quest cycle xong!")
 end
@@ -502,18 +405,14 @@ end
 -- FIND MOBS
 local function findMobs(from,maxD)
     local E=workspace:FindFirstChild("Enemies")
-    if not E then return nil,math.huge,{} end
+    if not E then return nil,math.huge,{}end
     local cl,cd=nil,maxD or math.huge;local nb={}
     for _,e in ipairs(E:GetChildren())do
         if not e:IsA("Model")then continue end
-        local eh=e:FindFirstChildOfClass("Humanoid")
-        local er=e:FindFirstChild("HumanoidRootPart")
+        local eh=e:FindFirstChildOfClass("Humanoid");local er=e:FindFirstChild("HumanoidRootPart")
         if not eh or eh.Health<=0 or not er then continue end
         local d=(from-er.Position).Magnitude
-        if d<=(maxD or math.huge) then
-            table.insert(nb,{mob=e,dist=d})
-            if d<cd then cd=d;cl=e end
-        end
+        if d<=(maxD or math.huge)then table.insert(nb,{mob=e,dist=d});if d<cd then cd=d;cl=e end end
     end
     return cl,cd,nb
 end
@@ -522,56 +421,37 @@ end
 task.spawn(function()
     while true do
         task.wait()
-        if not S.farm or S.qBusy then
-            if S.active and not S.qBusy then resetChar() end;continue
-        end
+        if not S.farm or S.qBusy then if S.active and not S.qBusy then resetChar()end;continue end
         local r=R();local h=H()
-        if not r or not h or h.Health<=0 then
-            if S.active then resetChar() end;task.wait(0.2);continue
-        end
+        if not r or not h or h.Health<=0 then if S.active then resetChar()end;task.wait(0.2);continue end
         local cl,_,nb=findMobs(r.Position,2000)
         if cl then
-            if not S.active then S.active=true;S.target=cl;startNF(cl) end
+            if not S.active then S.active=true;S.target=cl;startNF(cl)end
             if S.target then
                 local teh=S.target:FindFirstChildOfClass("Humanoid")
-                if not teh or teh.Health<=0 or not S.target.Parent then
-                    S.target=cl;startNF(cl)
-                end
+                if not teh or teh.Health<=0 or not S.target.Parent then S.target=cl;startNF(cl)end
             end
-            -- Tấn công mob trong 350 studs (hitbox to nên từ Y+18 vẫn hit)
             for _,item in ipairs(nb)do
                 if not S.farm then break end
                 if item.dist>350 then continue end
                 local mob=item.mob
-                local eh=mob:FindFirstChildOfClass("Humanoid")
-                local er=mob:FindFirstChild("HumanoidRootPart")
+                local eh=mob:FindFirstChildOfClass("Humanoid");local er=mob:FindFirstChild("HumanoidRootPart")
                 if not eh or eh.Health<=0 or not er then continue end
                 pcall(function()
-                    if RAA and #RAA>0 then
-                        local a=table.clone(RAA);a[1]=er
-                        AttackRemote:FireServer(table.unpack(a))
-                    else
-                        AttackRemote:FireServer(er,{})
-                    end
+                    if RAA and #RAA>0 then local a=table.clone(RAA);a[1]=er;AttackRemote:FireServer(table.unpack(a))
+                    else AttackRemote:FireServer(er,{})end
                 end)
             end
-            -- Fast attack: click 3 lần mỗi frame
-            for _=1,3 do
-                VIM:SendMouseButtonEvent(0,0,0,true,game,1)
-                VIM:SendMouseButtonEvent(0,0,0,false,game,1)
-            end
+            for _=1,3 do VIM:SendMouseButtonEvent(0,0,0,true,game,1);VIM:SendMouseButtonEvent(0,0,0,false,game,1)end
         else
-            if S.active then resetChar() end
+            if S.active then resetChar()end
             if S.farm and not S.qBusy then
                 r=R()
                 if r then
                     local nx=findMobs(r.Position,5000)
                     if nx then
                         local er=nx:FindFirstChild("HumanoidRootPart")
-                        if er then
-                            flyTo(er.Position+Vector3.new(0,22,0),300)
-                            S.active=true;S.target=nx;startNF(nx)
-                        end
+                        if er then flyTo(er.Position+Vector3.new(0,22,0),300);S.active=true;S.target=nx;startNF(nx)end
                     end
                 end
             end
@@ -579,157 +459,65 @@ task.spawn(function()
     end
 end)
 
--- Quest loop mỗi 30s
+-- Quest loop
 task.spawn(function()
-    while true do
-        task.wait(30)
-        if S.farm and S.quest and not S.qBusy then task.spawn(doQuest) end
-    end
+    while true do task.wait(30);if S.farm and S.quest and not S.qBusy then task.spawn(doQuest)end end
 end)
 
--- Hitbox auto start khi farm
+-- Hitbox auto start
 task.spawn(function()
-    while true do
-        task.wait(1)
-        if S.farm and not S.htc then startHitbox() end
-        if not S.farm and S.htc then S.htc:Disconnect();S.htc=nil end
-    end
+    while true do task.wait(1);if S.farm and not S.htc then startHitbox()end;if not S.farm and S.htc then S.htc:Disconnect();S.htc=nil end end
 end)
-
 
 task.wait(0)
-local SettingFarmSection = SettingFarmTab:AddLeftGroupbox("Setting Farm");
-SettingFarmSection:AddDropdown("SelectWeapon", {
-    Title = "Select Weapon",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-SettingFarmSection:AddToggle("AutoClick", { Title = "Auto Click", Default = false, Callback = function(v) end });
-SettingFarmSection:AddToggle("AutoTurnOnBuso", { Title = "Auto Turn On Buso", Default = false, Callback = function(v) end });
-SettingFarmSection:AddToggle("AutoTurnOnV4", { Title = "Auto Turn On V4", Default = false, Callback = function(v) end });
-SettingFarmSection:AddToggle("AutoTurnOnV3", { Title = "Auto Turn On V3", Default = false, Callback = function(v) end });
-SettingFarmSection:AddToggle("TeleportYIfLowHealth", { Title = "Teleport Y if Low Health", Default = false, Callback = function(v) end });
-SettingFarmSection:AddSlider({
-    Title = "% Health Player",
-    Min = 0, Max = 100, Default = 40,
-    Callback = function(v) end,
-});
-SettingFarmSection:AddSlider({
-    Title = "Distance Teleport Y",
-    Min = 0, Max = 5000, Default = 800,
-    Callback = function(v)
-        S.bringRange = v
-    end,
-});
-SettingFarmSection:AddSlider({
-    Title = "Bring Mob Count (200 studs)",
-    Min = 1, Max = 30, Default = 5,
-    Callback = function(v) S.bc = v end,
-});
-SettingFarmSection:AddToggle("BringMob", { Title = "Bring Mob", Default = false, Callback = function(v)
-    S.bring = v
-    if v then startBring() else stopBring() end
-    print("[VexzHub] Bring Mob:", v)
-end });
-SettingFarmSection:AddSlider({
-    Title = "Speed Tween",
-    Min = 350, Max = 1000, Default = 350,
-    Callback = function(v) end,
-});
 
--- ===================== HOLD AND SELECT SKILL TAB =====================
+-- =====================================================
+-- TAB SETTING FARM
+-- =====================================================
+local SettingFarmSection = SettingFarmTab:AddLeftGroupbox("Setting Farm");
+SettingFarmSection:AddDropdown("SelectWeapon", {Title="Select Weapon",Values={},Default=nil,Multi=false,Callback=function(v)end});
+SettingFarmSection:AddToggle("AutoClick",{Title="Auto Click",Default=false,Callback=function(v)end});
+SettingFarmSection:AddToggle("AutoTurnOnBuso",{Title="Auto Turn On Buso",Default=false,Callback=function(v)end});
+SettingFarmSection:AddToggle("AutoTurnOnV4",{Title="Auto Turn On V4",Default=false,Callback=function(v)end});
+SettingFarmSection:AddToggle("AutoTurnOnV3",{Title="Auto Turn On V3",Default=false,Callback=function(v)end});
+SettingFarmSection:AddToggle("TeleportYIfLowHealth",{Title="Teleport Y if Low Health",Default=false,Callback=function(v)end});
+SettingFarmSection:AddSlider({Title="% Health Player",Min=0,Max=100,Default=40,Callback=function(v)end});
+SettingFarmSection:AddSlider({Title="Distance Teleport Y",Min=0,Max=5000,Default=800,Callback=function(v)S.bringRange=v end});
+SettingFarmSection:AddSlider({Title="Bring Mob Count (200 studs)",Min=1,Max=30,Default=5,Callback=function(v)S.bc=v end});
+SettingFarmSection:AddToggle("BringMob",{Title="Bring Mob",Default=false,Callback=function(v)S.bring=v;if v then startBring()else stopBring()end;print("[VexzHub] Bring Mob:",v)end});
+SettingFarmSection:AddSlider({Title="Speed Tween",Min=350,Max=1000,Default=350,Callback=function(v)end});
+
+-- =====================================================
+-- TAB HOLD AND SELECT SKILL
+-- =====================================================
 local SelectSkillsSection = HoldSelectSkillTab:AddLeftGroupbox("Select Skills");
-SelectSkillsSection:AddDropdown("SelectSkillsMelee", {
-    Title = "Select Skills Melee",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-SelectSkillsSection:AddDropdown("SelectSkillsSword", {
-    Title = "Select Skills Sword",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-SelectSkillsSection:AddDropdown("SelectSkillsGun", {
-    Title = "Select Skills Gun",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-SelectSkillsSection:AddDropdown("SelectSkillsBloxFruit", {
-    Title = "Select Skills Blox Fruit",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
+SelectSkillsSection:AddDropdown("SelectSkillsMelee",{Title="Select Skills Melee",Values={},Default=nil,Multi=false,Callback=function(v)end});
+SelectSkillsSection:AddDropdown("SelectSkillsSword",{Title="Select Skills Sword",Values={},Default=nil,Multi=false,Callback=function(v)end});
+SelectSkillsSection:AddDropdown("SelectSkillsGun",{Title="Select Skills Gun",Values={},Default=nil,Multi=false,Callback=function(v)end});
+SelectSkillsSection:AddDropdown("SelectSkillsBloxFruit",{Title="Select Skills Blox Fruit",Values={},Default=nil,Multi=false,Callback=function(v)end});
 
 local HoldSkillsSection = HoldSelectSkillTab:AddLeftGroupbox("Hold Skills");
-HoldSkillsSection:AddToggle("UseSkillFast", { Title = "Use Skill Fast (Don't Hold)", Default = false, Callback = function(v) end });
-HoldSkillsSection:AddDropdown("SetDelayMelee", {
-    Title = "Set Delay Melee",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-HoldSkillsSection:AddDropdown("SetDelaySword", {
-    Title = "Set Delay Sword",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-HoldSkillsSection:AddDropdown("SetDelayGun", {
-    Title = "Set Delay Gun",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-HoldSkillsSection:AddDropdown("SetDelayBloxFruit", {
-    Title = "Set Delay Blox Fruit",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
+HoldSkillsSection:AddToggle("UseSkillFast",{Title="Use Skill Fast (Don't Hold)",Default=false,Callback=function(v)end});
+HoldSkillsSection:AddDropdown("SetDelayMelee",{Title="Set Delay Melee",Values={},Default=nil,Multi=false,Callback=function(v)end});
+HoldSkillsSection:AddDropdown("SetDelaySword",{Title="Set Delay Sword",Values={},Default=nil,Multi=false,Callback=function(v)end});
+HoldSkillsSection:AddDropdown("SetDelayGun",{Title="Set Delay Gun",Values={},Default=nil,Multi=false,Callback=function(v)end});
+HoldSkillsSection:AddDropdown("SetDelayBloxFruit",{Title="Set Delay Blox Fruit",Values={},Default=nil,Multi=false,Callback=function(v)end});
 
--- ===================== FARMING TAB =====================
+-- =====================================================
+-- TAB FARMING
+-- =====================================================
 local FarmingSection = FarmingTab:AddLeftGroupbox("Setting Farm");
-FarmingSection:AddDropdown("SelectMethodFarm", {
-    Title = "Select Method Farm",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-FarmingSection:AddSlider({
-    Title = "Distance Farm Aura",
-    Min = 100, Max = 1000, Default = 300,
-    Callback = function(v) end,
-});
-FarmingSection:AddToggle("IgnoreAttackKatakuri", { Title = "Ignore Attack Katakuri", Default = false, Callback = function(v) end });
-FarmingSection:AddToggle("HopFindKatakuri", { Title = "Hop Find Katakuri", Default = false, Callback = function(v) end });
-FarmingSection:AddToggle("AutoQuestKatakuri", { Title = "Auto Quest [Lv 1-2800]", Default = false, Callback = function(v)
-    S.quest = v
-    if v and S.farm and not S.qBusy then task.spawn(doQuest) end
-    print("[VexzHub] Auto Quest:", v)
-end });
-FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, Callback = function(v)
-    S.farm = v
-    if not v then
-        resetChar(); stopBring()
-        if S.htc then S.htc:Disconnect(); S.htc=nil end
+FarmingSection:AddDropdown("SelectMethodFarm",{Title="Select Method Farm",Values={},Default=nil,Multi=false,Callback=function(v)end});
+FarmingSection:AddSlider({Title="Distance Farm Aura",Min=100,Max=1000,Default=300,Callback=function(v)end});
+FarmingSection:AddToggle("IgnoreAttackKatakuri",{Title="Ignore Attack Katakuri",Default=false,Callback=function(v)end});
+FarmingSection:AddToggle("HopFindKatakuri",{Title="Hop Find Katakuri",Default=false,Callback=function(v)end});
+FarmingSection:AddToggle("AutoQuestKatakuri",{Title="Auto Quest [Lv 1-2800]",Default=false,Callback=function(v)S.quest=v;if v and S.farm and not S.qBusy then task.spawn(doQuest)end;print("[VexzHub] Auto Quest:",v)end});
+FarmingSection:AddToggle("StartFarm",{Title="Start Farm",Default=false,Callback=function(v)
+    S.farm=v
+    if not v then resetChar();stopBring();if S.htc then S.htc:Disconnect();S.htc=nil end
     else
         startHitbox()
-        if S.quest then task.spawn(doQuest) end
+        if S.quest then task.spawn(doQuest)end
         task.spawn(function()
             task.wait(S.quest and 3 or 0)
             local r=R()
@@ -737,39 +525,76 @@ FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, C
                 local nx=findMobs(r.Position,2000)
                 if nx then
                     local er=nx:FindFirstChild("HumanoidRootPart")
-                    if er then
-                        flyTo(er.Position+Vector3.new(0,22,0),300)
-                        S.active=true;S.target=nx;startNF(nx)
-                    end
+                    if er then flyTo(er.Position+Vector3.new(0,22,0),300);S.active=true;S.target=nx;startNF(nx)end
                 end
             end
         end)
     end
-    print("[VexzHub] Farm:", v)
-end });
+    print("[VexzHub] Farm:",v)
+end});
 
 local MasteryFarmSection = FarmingTab:AddLeftGroupbox("Mastery Farm");
-MasteryFarmSection:AddDropdown("SelectMethodFarmMastery", {
-    Title = "Select Method Farm Mastery",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-MasteryFarmSection:AddSlider({
-    Title = "Health %",
-    Min = 0, Max = 100, Default = 40,
-    Callback = function(v) end,
-});
-MasteryFarmSection:AddToggle("FarmMastery", { Title = "Farm Mastery", Default = false, Callback = function(v) end });
+MasteryFarmSection:AddDropdown("SelectMethodFarmMastery",{Title="Select Method Farm Mastery",Values={},Default=nil,Multi=false,Callback=function(v)end});
+MasteryFarmSection:AddSlider({Title="Health %",Min=0,Max=100,Default=40,Callback=function(v)end});
+MasteryFarmSection:AddToggle("FarmMastery",{Title="Farm Mastery",Default=false,Callback=function(v)end});
 
 local FarmingMaterialSection = FarmingTab:AddLeftGroupbox("Farming Material");
-FarmingMaterialSection:AddDropdown("SelectMaterial", {
-    Title = "Select Material",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-FarmingMaterialSection:AddToggle("FarmMaterial", { Title = "Farm Material", Default = false, Callback = function(v) end }); 
- 
+FarmingMaterialSection:AddDropdown("SelectMaterial",{Title="Select Material",Values={},Default=nil,Multi=false,Callback=function(v)end});
+FarmingMaterialSection:AddToggle("FarmMaterial",{Title="Farm Material",Default=false,Callback=function(v)end});
+
+-- =====================================================
+-- NÚT LOGO NGOÀI MÀN HÌNH
+-- =====================================================
+local LogoButton = Instance.new("ImageButton")
+LogoButton.Size = UDim2.new(0, 60, 0, 60)
+LogoButton.Position = UDim2.new(0.01, 0, 0.5, -30)
+LogoButton.AnchorPoint = Vector2.new(0, 0.5)
+LogoButton.BackgroundTransparency = 1
+LogoButton.Image = "rbxassetid://132245162369180"
+LogoButton.Active = true
+LogoButton.Visible = true
+LogoButton.ZIndex = 10
+LogoButton.Parent = game:GetService("CoreGui")
+
+local LogoCorner = Instance.new("UICorner")
+LogoCorner.CornerRadius = UDim.new(1, 0)
+LogoCorner.Parent = LogoButton
+
+local LogoStroke = Instance.new("UIStroke")
+LogoStroke.Color = Color3.fromRGB(255, 100, 100)
+LogoStroke.Thickness = 2
+LogoStroke.Parent = LogoButton
+
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+LogoButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = LogoButton.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        LogoButton.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+LogoButton.MouseButton1Click:Connect(function()
+    local MainFrame = Window.MainFrame or Window.Root or Window.Container
+    if MainFrame then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end) 
