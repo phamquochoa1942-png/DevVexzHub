@@ -1,566 +1,416 @@
 Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
-Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://132245162369180" });
+Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://93384558628762" });
 wait(1);
 Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
 wait(0);
 
--- ╔══════════════════════════════════════════════════════╗
--- ║  LOGIC: Auto Farm + Bring Mob + Auto Quest          ║
--- ║  Inject vào VexzHub — by Quoc Hoa                  ║
--- ╚══════════════════════════════════════════════════════╝
+-- ╔══════════════════════════════════════════╗
+-- ║  VexzHub Logic v5.0 — by Quoc Hoa      ║
+-- ╚══════════════════════════════════════════╝
+local Players=game:GetService("Players")
+local RS=game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
+local VIM=game:GetService("VirtualInputManager")
+local LP=Players.LocalPlayer
 
-local Players             = game:GetService("Players")
-local ReplicatedStorage   = game:GetService("ReplicatedStorage")
-local RunService          = game:GetService("RunService")
-local TweenService        = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local LocalPlayer         = Players.LocalPlayer
-
--- =====================================================
 -- REMOTES
--- =====================================================
-local Net = ReplicatedStorage:WaitForChild("Modules", 10)
-local AttackRemote = Net and Net:WaitForChild("Net", 10)
-    and Net.Net:WaitForChild("RE/RegisterHit", 10)
+local AttackRemote=RS:WaitForChild("Modules",10):WaitForChild("Net",10):WaitForChild("RE/RegisterHit",10)
+local QuestRemote=RS:WaitForChild("Remotes",10):WaitForChild("QuestUpdate",10)
+local CommF=RS:WaitForChild("Remotes",10):WaitForChild("CommF_",10)
 
-local QuestRemote = ReplicatedStorage:WaitForChild("Remotes", 10)
-    and ReplicatedStorage.Remotes:WaitForChild("QuestUpdate", 10)
-
--- Hook để lấy attack args thật từ game gốc
--- Cách duy nhất đảm bảo dame 100% không bị patch
-local realAttackArgs = nil
+-- Hook attack args — tự đánh 1 lần để lấy hash thật
+local RAA=nil
 pcall(function()
-    local mt  = getrawmetatable(game)
-    local old = mt.__namecall
-    setreadonly(mt, false)
-    mt.__namecall = newcclosure(function(self, ...)
-        if getnamecallmethod() == "FireServer" and self == AttackRemote then
-            realAttackArgs = {...}
-        end
-        return old(self, ...)
+    local mt=getrawmetatable(game);local old=mt.__namecall
+    setreadonly(mt,false)
+    mt.__namecall=newcclosure(function(self,...)
+        if getnamecallmethod()=="FireServer"and self==AttackRemote then RAA={...} end
+        return old(self,...)
     end)
-    setreadonly(mt, true)
-    print("[VexzHub] Hook attack OK — tự đánh 1 lần để lấy args")
+    setreadonly(mt,true)
+    print("[VexzHub] Hook OK")
 end)
 
--- =====================================================
--- LEVEL DATA — Lv 1 → 2800
--- { minLv, maxLv, questNPC, mobFolder }
--- questNPC = tên NPC trong workspace.NPCs hoặc workspace
--- =====================================================
--- QuestData: { minLv, maxLv, npcName, npcTitle, mobName }
--- npcName  = tên Model của NPC trong workspace
--- npcTitle = tên hiển thị trên UI quest
--- Cần đứng trong 15 studs để nhận quest
-local QuestData = {
-    -- Sea 1
-    {1,   15,  "Bandit Quest Giver",     "Bandit",              "Bandit"},
-    {15,  30,  "Bandit Quest Giver",     "Bandit",              "Bandit"},
-    {30,  60,  "Jungle Quest Giver",     "Gorilla",             "Gorilla"},
-    {60,  90,  "Pirate Quest Giver",     "Pirate",              "Pirate"},
-    {90,  120, "Desert Quest Giver",     "Desert Bandit",       "Desert Bandit"},
-    {120, 150, "Snow Quest Giver",       "Snow Bandit",         "Snow Bandit"},
-    {150, 200, "Marine Quest Giver",     "Prisoner",            "Prisoner"},
-    {200, 250, "Sky Quest Giver",        "Sky Bandit",          "Sky Bandit"},
-    {250, 300, "Fountain Quest Giver",   "Citizen",             "Citizen"},
-    {300, 375, "Graveyard Quest Giver",  "Zombie",              "Zombie"},
-    {375, 450, "Thriller Quest Giver",   "Zombie",              "Zombie"},
-    {450, 500, "Colosseum Quest Giver",  "Gladiator",           "Gladiator"},
-    {500, 575, "Magma Quest Giver",      "Magma Ninja",         "Magma Ninja"},
-    {575, 625, "Iron Quest Giver",       "Dark Master",         "Dark Master"},
-    {625, 700, "Dragon Quest Giver",     "Dragon Crew Archer",  "Dragon Crew Archer"},
-    {700, 775, "Rose Quest Giver",       "Chocolate Bar Battler","Chocolate Bar Battler"},
-    -- Sea 2
-    {775, 850, "Dark Arena Quest Giver", "Imp",                 "Imp"},
-    {850, 925, "Ice Quest Giver",        "Snow Lurker",         "Snow Lurker"},
-    {925, 1000,"Forest Quest Giver",     "Forest Pirate",       "Forest Pirate"},
-    {1000,1050,"Military Quest Giver",   "Military Soldier",    "Military Soldier"},
-    {1050,1100,"Oak Quest Giver",        "Diable",              "Diable"},
-    {1100,1200,"Rift Quest Giver",       "Deranged Slasher",    "Deranged Slasher"},
-    {1200,1250,"Sky Quest Giver 2",      "Sky Stalker",         "Sky Stalker"},
-    {1250,1350,"Castle Quest Giver",     "Royal Soldier",       "Royal Soldier"},
-    {1350,1425,"Sea Quest Giver",        "Sea Soldier",         "Sea Soldier"},
-    {1425,1500,"Hot Quest Giver",        "Ice Cream Islander",  "Ice Cream Islander"},
-    {1500,1575,"Terror Quest Giver",     "Ship Deckhand",       "Ship Deckhand"},
-    -- Sea 3
-    {1575,1650,"Turtle Quest Giver",     "Fishman Raider",      "Fishman Raider"},
-    {1650,1700,"Giant Quest Giver",      "Giant Warrior",       "Giant Warrior"},
-    {1700,1750,"Hydra Quest Giver",      "Marine Lieutenant",   "Marine Lieutenant"},
-    {1750,1800,"New World Quest Giver",  "Pirate Admin",        "Pirate Admin"},
-    {1800,1875,"Tiki Quest Giver",       "Pirate Millionaire",  "Pirate Millionaire"},
-    {1875,1950,"Treasure Quest Giver",   "Corrupt Master",      "Corrupt Master"},
-    {1950,2025,"Haunted Quest Giver",    "Reborn Skeleton",     "Reborn Skeleton"},
-    {2025,2100,"Far East Quest Giver",   "Order",               "Order"},
-    {2100,2175,"Grave Quest Giver",      "Adventurer",          "Adventurer"},
-    {2175,2275,"Frozen Quest Giver",     "Yeti",                "Yeti"},
-    {2275,2375,"Cursed Quest Giver",     "Cursed Dual Katana User","Cursed Dual Katana User"},
-    {2375,2475,"Legacy Quest Giver",     "Pirate Warrior",      "Pirate Warrior"},
-    {2475,2575,"Bart Quest Giver",       "Beautiful Pirate",    "Beautiful Pirate"},
-    {2575,2650,"London Quest Giver",     "Kaiju",               "Kaiju"},
-    {2650,2700,"Ghost Quest Giver",      "Poltergeist",         "Poltergeist"},
-    {2700,2800,"Soul Quest Giver",       "Demonic Soul",        "Demonic Soul"},
+-- ══════════════════════════════════════════
+-- QUEST DATA THẬT — CFrame chính xác 100%
+-- { minLv, maxLv, NameQuest, CFrameQuest, CFrameMon, entrance }
+-- ══════════════════════════════════════════
+local QD={
+-- SEA 1
+{1,9,"BanditQuest1",CFrame.new(1059.37195,15.4495068,1550.4231,0.939700544,-0,-0.341998369,0,1,-0,0.341998369,0,0.939700544),CFrame.new(1045.962646,27.0025081,1560.8203),nil},
+{10,14,"JungleQuest",CFrame.new(-1598.08911,35.5501175,153.377838,0,0,1,0,1,-0,-1,0,0),CFrame.new(-1448.518066,67.853012,11.465796),nil},
+{15,29,"JungleQuest",CFrame.new(-1598.08911,35.5501175,153.377838,0,0,1,0,1,-0,-1,0,0),CFrame.new(-1129.883666,40.463546,-525.423706),nil},
+{30,39,"BuggyQuest1",CFrame.new(-1141.07483,4.10001802,3831.5498,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-1103.513427,13.752052,3896.091064),nil},
+{40,59,"BuggyQuest1",CFrame.new(-1141.07483,4.10001802,3831.5498,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-1140.083740,14.809885,4322.921386),nil},
+{60,74,"DesertQuest",CFrame.new(894.488647,5.14000702,4392.43359,0.819155693,-0,-0.573571265,0,1,-0,0.573571265,0,0.819155693),CFrame.new(924.799804,6.448674,4481.585937),nil},
+{75,89,"DesertQuest",CFrame.new(894.488647,5.14000702,4392.43359,0.819155693,-0,-0.573571265,0,1,-0,0.573571265,0,0.819155693),CFrame.new(1608.282226,8.614224,4371.007324),nil},
+{90,99,"SnowQuest",CFrame.new(1389.74451,88.1519318,-1298.90796,-0.342042685,0,0.939684391,0,1,0,-0.939684391,0,-0.342042685),CFrame.new(1354.347900,87.272773,-1393.946533),nil},
+{100,119,"SnowQuest",CFrame.new(1389.74451,88.1519318,-1298.90796,-0.342042685,0,0.939684391,0,1,0,-0.939684391,0,-0.342042685),CFrame.new(1201.641235,144.579589,-1550.067016),nil},
+{120,149,"MarineQuest2",CFrame.new(-5039.58643,27.3500385,4324.68018,0,0,-1,0,1,0,1,0,0),CFrame.new(-4881.230957,22.652044,4273.752441),nil},
+{150,174,"SkyQuest",CFrame.new(-4839.53027,716.368591,-2619.44165,0.866007268,0,0.500031412,0,1,0,-0.500031412,0,0.866007268),CFrame.new(-4953.207031,295.744201,-2899.229003),nil},
+{175,189,"SkyQuest",CFrame.new(-4839.53027,716.368591,-2619.44165,0.866007268,0,0.500031412,0,1,0,-0.500031412,0,0.866007268),CFrame.new(-5259.844726,391.397674,-2229.035400),nil},
+{190,209,"PrisonerQuest",CFrame.new(5308.93115,1.65517521,475.120514,-0.0894274712,-5.00292918e-09,-0.995993316,1.60817859e-09,1,-5.16744869e-09,0.995993316,-2.06384709e-09,-0.0894274712),CFrame.new(5098.973632,-0.320405,474.237335),nil},
+{210,249,"PrisonerQuest",CFrame.new(5308.93115,1.65517521,475.120514,-0.0894274712,-5.00292918e-09,-0.995993316,1.60817859e-09,1,-5.16744869e-09,0.995993316,-2.06384709e-09,-0.0894274712),CFrame.new(5654.563476,15.633401,866.299194),nil},
+{250,274,"ColosseumQuest",CFrame.new(-1580.04663,6.35000277,-2986.47534,-0.515037298,0,-0.857167721,0,1,0,0.857167721,0,-0.515037298),CFrame.new(-1820.214843,51.683856,-2740.665039),nil},
+{275,299,"ColosseumQuest",CFrame.new(-1580.04663,6.35000277,-2986.47534,-0.515037298,0,-0.857167721,0,1,0,0.857167721,0,-0.515037298),CFrame.new(-1292.838134,56.380882,-3339.031494),nil},
+{300,324,"MagmaQuest",CFrame.new(-5313.37012,10.9500084,8515.29395,-0.499959469,0,0.866048813,0,1,0,-0.866048813,0,-0.499959469),CFrame.new(-5411.164550,11.081554,8454.292968),nil},
+{325,374,"MagmaQuest",CFrame.new(-5313.37012,10.9500084,8515.29395,-0.499959469,0,0.866048813,0,1,0,-0.866048813,0,-0.499959469),CFrame.new(-5802.868164,86.262413,8828.859375),nil},
+{375,399,"FishmanQuest",CFrame.new(61122.65234375,18.497442245483,1569.3997802734),CFrame.new(60878.300781,18.482830,1543.757446),Vector3.new(61163.8515625,11.6796875,1819.7841796875)},
+{400,449,"FishmanQuest",CFrame.new(61122.65234375,18.497442245483,1569.3997802734),CFrame.new(61922.632812,18.482830,1493.934326),Vector3.new(61163.8515625,11.6796875,1819.7841796875)},
+{450,474,"SkyExp1Quest",CFrame.new(-4721.88867,843.874695,-1949.96643,0.996191859,-0,-0.0871884301,0,1,-0,0.0871884301,0,0.996191859),CFrame.new(-4710.042968,845.276977,-1927.307983),Vector3.new(-4607.82275,872.54248,-1667.55688)},
+{475,524,"SkyExp1Quest",CFrame.new(-7859.09814,5544.19043,-381.476196,-0.422592998,0,0.906319618,0,1,0,-0.906319618,0,-0.422592998),CFrame.new(-7678.489746,5566.403808,-497.215606),Vector3.new(-7894.6176757813,5547.1416015625,-380.29119873047)},
+{525,549,"SkyExp2Quest",CFrame.new(-7906.81592,5634.6626,-1411.99194,0,0,-1,0,1,0,1,0,0),CFrame.new(-7624.252441,5658.133300,-1467.354248),nil},
+{550,624,"SkyExp2Quest",CFrame.new(-7906.81592,5634.6626,-1411.99194,0,0,-1,0,1,0,1,0,0),CFrame.new(-7836.753417,5645.664062,-1790.623657),nil},
+{625,649,"FountainQuest",CFrame.new(5259.81982,37.3500175,4050.0293,0.087131381,0,0.996196866,0,1,0,-0.996196866,0,0.087131381),CFrame.new(5551.021972,78.901351,3930.412841),nil},
+{650,699,"FountainQuest",CFrame.new(5259.81982,37.3500175,4050.0293,0.087131381,0,0.996196866,0,1,0,-0.996196866,0,0.087131381),CFrame.new(5441.951660,42.502059,4950.09375),nil},
+-- SEA 2
+{700,724,"Area1Quest",CFrame.new(-429.543518,71.7699966,1836.18188,-0.22495985,0,-0.974368095,0,1,0,0.974368095,0,-0.22495985),CFrame.new(-728.326721,52.779319,2345.770507),nil},
+{725,774,"Area1Quest",CFrame.new(-429.543518,71.7699966,1836.18188,-0.22495985,0,-0.974368095,0,1,0,0.974368095,0,-0.22495985),CFrame.new(-1004.324401,80.158866,1424.619384),nil},
+{775,799,"Area2Quest",CFrame.new(638.43811,71.769989,918.282898,0.139203906,0,0.99026376,0,1,0,-0.99026376,0,0.139203906),CFrame.new(1068.664306,137.614288,1322.106079),nil},
+{800,874,"Area2Quest",CFrame.new(632.698608,73.1055908,918.666321,-0.0319722369,8.96074881e-10,-0.999488771,1.36326533e-10,1,8.92172336e-10,0.999488771,-1.07732087e-10,-0.0319722369),CFrame.new(73.078674,81.863441,-27.470672),nil},
+{875,899,"MarineQuest3",CFrame.new(-2440.79639,71.7140732,-3216.06812,0.866007268,0,0.500031412,0,1,0,-0.500031412,0,0.866007268),CFrame.new(-2821.372314,75.897277,-3070.089111),nil},
+{900,949,"MarineQuest3",CFrame.new(-2440.79639,71.7140732,-3216.06812,0.866007268,0,0.500031412,0,1,0,-0.500031412,0,0.866007268),CFrame.new(-1861.231079,80.176582,-3254.697509),nil},
+{950,974,"ZombieQuest",CFrame.new(-5497.06152,47.5923004,-795.237061,-0.29242146,0,-0.95628953,0,1,0,0.95628953,0,-0.29242146),CFrame.new(-5657.776855,78.969734,-928.687011),nil},
+{975,999,"ZombieQuest",CFrame.new(-5497.06152,47.5923004,-795.237061,-0.29242146,0,-0.95628953,0,1,0,0.95628953,0,-0.29242146),CFrame.new(-6037.667968,32.184638,-1340.659790),nil},
+{1000,1049,"SnowMountainQuest",CFrame.new(609.858826,400.119904,-5372.25928,-0.374604106,0,0.92718488,0,1,0,-0.92718488,0,-0.374604106),CFrame.new(549.147338,427.387054,-5563.698730),nil},
+{1050,1099,"SnowMountainQuest",CFrame.new(609.858826,400.119904,-5372.25928,-0.374604106,0,0.92718488,0,1,0,-0.92718488,0,-0.374604106),CFrame.new(1142.745117,475.639801,-5199.416503),nil},
+{1100,1124,"IceSideQuest",CFrame.new(-6064.06885,15.2422857,-4902.97852,0.453972578,-0,-0.891015649,0,1,-0,0.891015649,0,0.453972578),CFrame.new(-5707.471679,15.951709,-4513.392089),nil},
+{1125,1174,"IceSideQuest",CFrame.new(-6064.06885,15.2422857,-4902.97852,0.453972578,-0,-0.891015649,0,1,-0,0.891015649,0,0.453972578),CFrame.new(-6341.366699,15.951770,-5723.162109),nil},
+{1175,1199,"FireSideQuest",CFrame.new(-5428.03174,15.0622921,-5299.43457,-0.882952213,0,0.469463557,0,1,0,-0.469463557,0,-0.882952213),CFrame.new(-5449.672851,76.658744,-5808.200683),nil},
+{1200,1249,"FireSideQuest",CFrame.new(-5428.03174,15.0622921,-5299.43457,-0.882952213,0,0.469463557,0,1,0,-0.469463557,0,-0.882952213),CFrame.new(-5213.331542,49.737880,-4701.451171),nil},
+{1250,1274,"ShipQuest1",CFrame.new(1037.80127,125.092171,32911.6016),CFrame.new(1212.011108,150.792053,33059.246093),Vector3.new(923.21252441406,126.9760055542,32852.83203125)},
+{1275,1299,"ShipQuest1",CFrame.new(1037.80127,125.092171,32911.6016),CFrame.new(919.478637,43.544013,32779.96875),Vector3.new(923.21252441406,126.9760055542,32852.83203125)},
+{1300,1324,"ShipQuest2",CFrame.new(968.80957,125.092171,33244.125),CFrame.new(919.438537,129.555999,33436.035156),Vector3.new(923.21252441406,126.9760055542,32852.83203125)},
+{1325,1349,"ShipQuest2",CFrame.new(968.80957,125.092171,33244.125),CFrame.new(1036.017944,181.439041,33315.726562),Vector3.new(923.21252441406,126.9760055542,32852.83203125)},
+{1350,1374,"FrostQuest",CFrame.new(5667.6582,26.7997818,-6486.08984,-0.933587909,0,-0.358349502,0,1,0,0.358349502,0,-0.933587909),CFrame.new(5966.246093,62.970020,-6179.382812),nil},
+{1375,1424,"FrostQuest",CFrame.new(5667.6582,26.7997818,-6486.08984,-0.933587909,0,-0.358349502,0,1,0,0.358349502,0,-0.933587909),CFrame.new(5407.073730,69.194374,-6880.880371),nil},
+{1425,1449,"ForgottenQuest",CFrame.new(-3054.44458,235.544281,-10142.8193,0.990270376,-0,-0.13915664,0,1,-0,0.13915664,0,0.990270376),CFrame.new(-3028.223632,64.674514,-9775.426757),nil},
+{1450,1499,"ForgottenQuest",CFrame.new(-3054,240,-10146),CFrame.new(-3291,252,-10501),nil},
+-- SEA 3
+{1500,1524,"PiratePortQuest",CFrame.new(-290.074677,42.9034653,5581.58984,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-245.996383,47.306152,5584.100585),nil},
+{1525,1574,"PiratePortQuest",CFrame.new(-290.074677,42.9034653,5581.58984,0.965929627,-0,-0.258804798,0,1,-0,0.258804798,0,0.965929627),CFrame.new(-187.330154,86.239875,6013.513671),nil},
+{1575,1599,"DragonCrewQuest",CFrame.new(6738.96142578125,127.81645965576172,-713.511474609375),CFrame.new(6920.714355,56.155971,-942.504455),nil},
+{1600,1624,"DragonCrewQuest",CFrame.new(6738.96142578125,127.81645965576172,-713.511474609375),CFrame.new(6817.912597,484.804443,513.414123),nil},
+{1625,1649,"VenomCrewQuest",CFrame.new(5213.8740234375,1004.5042724609375,758.6944580078125),CFrame.new(4584.692871,1002.643554,705.795898),nil},
+{1650,1699,"VenomCrewQuest",CFrame.new(5213.8740234375,1004.5042724609375,758.6944580078125),CFrame.new(4638.785644,1078.940917,881.800231),nil},
+{1700,1724,"MarineTreeIsland",CFrame.new(2180.54126,27.8156815,-6741.5498,-0.965929747,0,0.258804798,0,1,0,-0.258804798,0,-0.965929747),CFrame.new(2286.007812,73.133918,-7159.809082),nil},
+{1725,1774,"MarineTreeIsland",CFrame.new(2179.98828125,28.731239318848,-6740.0551757813),CFrame.new(3656.773681,160.524063,-7001.598632),nil},
+{1775,1799,"DeepForestIsland3",CFrame.new(-10581.6563,330.872955,-8761.18652,-0.882952213,0,0.469463557,0,1,0,-0.469463557,0,-0.882952213),CFrame.new(-10407.526367,331.762634,-8368.516601),nil},
+{1800,1824,"DeepForestIsland3",CFrame.new(-10581.6563,330.872955,-8761.18652,-0.882952213,0,0.469463557,0,1,0,-0.469463557,0,-0.882952213),CFrame.new(-10994.701171,352.381408,-9002.110351),nil},
+{1825,1849,"DeepForestIsland",CFrame.new(-13234.04,331.488495,-7625.40137,0.707134247,-0,-0.707079291,0,1,-0,0.707079291,0,0.707134247),CFrame.new(-13274.478515,332.378143,-7769.580566),nil},
+{1850,1899,"DeepForestIsland",CFrame.new(-13234.04,331.488495,-7625.40137,0.707134247,-0,-0.707079291,0,1,-0,0.707079291,0,0.707134247),CFrame.new(-13680.607421,501.081542,-6991.189453),nil},
+{1900,1924,"DeepForestIsland2",CFrame.new(-12680.3818,389.971039,-9902.01953,-0.0871315002,0,0.996196866,0,1,0,-0.996196866,0,-0.0871315002),CFrame.new(-12256.160156,331.738281,-10485.836914),nil},
+{1925,1974,"DeepForestIsland2",CFrame.new(-12680.3818,389.971039,-9902.01953,-0.0871315002,0,0.996196866,0,1,0,-0.996196866,0,-0.0871315002),CFrame.new(-13457.904296,391.545654,-9859.177734),nil},
+{1975,1999,"HauntedQuest1",CFrame.new(-9479.2168,141.215088,5566.09277,0,0,1,0,1,-0,-1,0,0),CFrame.new(-8763.723632,165.722991,6159.861816),nil},
+{2000,2024,"HauntedQuest1",CFrame.new(-9479.2168,141.215088,5566.09277,0,0,1,0,1,-0,-1,0,0),CFrame.new(-10144.131835,138.626678,5838.088867),nil},
+{2025,2049,"HauntedQuest2",CFrame.new(-9516.99316,172.017181,6078.46533,0,0,-1,0,1,0,1,0,0),CFrame.new(-9505.872070,172.104827,6158.993164),nil},
+{2050,2074,"HauntedQuest2",CFrame.new(-9516.99316,172.017181,6078.46533,0,0,-1,0,1,0,1,0,0),CFrame.new(-9582.022460,6.251527,6205.478515),nil},
+{2075,2099,"NutsIslandQuest",CFrame.new(-2104.3908691406,38.104167938232,-10194.21875,0,0,-1,0,1,0,1,0,0),CFrame.new(-2143.241943,47.721984,-10029.995117),nil},
+{2100,2124,"NutsIslandQuest",CFrame.new(-2104.3908691406,38.104167938232,-10194.21875,0,0,-1,0,1,0,1,0,0),CFrame.new(-1859.354003,38.103168,-10422.429687),nil},
+{2125,2149,"IceCreamIslandQuest",CFrame.new(-820.64825439453,65.819526672363,-10965.795898438,0,0,-1,0,1,0,1,0,0),CFrame.new(-872.246582,65.819572,-10919.957031),nil},
+{2150,2199,"IceCreamIslandQuest",CFrame.new(-820.64825439453,65.819526672363,-10965.795898438,0,0,-1,0,1,0,1,0,0),CFrame.new(-558.061035,112.048957,-11290.774414),nil},
+{2200,2224,"CakeQuest1",CFrame.new(-2021.32007,37.7982254,-12028.7295,0.957576931,-8.80302053e-08,0.288177818,6.9301187e-08,1,7.51931211e-08,-0.288177818,-5.2032135e-08,0.957576931),CFrame.new(-2374.136718,37.798263,-12125.308593),nil},
+{2225,2249,"CakeQuest1",CFrame.new(-2021.32007,37.7982254,-12028.7295,0.957576931,-8.80302053e-08,0.288177818,6.9301187e-08,1,7.51931211e-08,-0.288177818,-5.2032135e-08,0.957576931),CFrame.new(-1598.307006,43.773197,-12244.581054),nil},
+{2250,2274,"CakeQuest2",CFrame.new(-1927.91602,37.7981339,-12842.5391,-0.96804446,4.22142143e-08,0.250778586,4.74911062e-08,1,1.49904711e-08,-0.250778586,2.64211941e-08,-0.96804446),CFrame.new(-1887.809936,77.618507,-12998.350585),nil},
+{2275,2299,"CakeQuest2",CFrame.new(-1927.91602,37.7981339,-12842.5391,-0.96804446,4.22142143e-08,0.250778586,4.74911062e-08,1,1.49904711e-08,-0.250778586,2.64211941e-08,-0.96804446),CFrame.new(-2216.188232,82.884521,-12869.293945),nil},
+{2300,2324,"ChocQuest1",CFrame.new(233.22836303710938,29.876001358032227,-12201.2333984375),CFrame.new(-21.553283,80.574996,-12352.387695),nil},
+{2325,2349,"ChocQuest1",CFrame.new(233.22836303710938,29.876001358032227,-12201.2333984375),CFrame.new(582.590576,77.188095,-12463.162109),nil},
+{2350,2374,"ChocQuest2",CFrame.new(150.5066375732422,30.693693161010742,-12774.5029296875),CFrame.new(165.188476,76.058853,-12600.836914),nil},
+{2375,2399,"ChocQuest2",CFrame.new(150.5066375732422,30.693693161010742,-12774.5029296875),CFrame.new(134.865631,77.247680,-12876.547851),nil},
+{2400,2424,"CandyQuest1",CFrame.new(-1150.0400390625,20.378934860229492,-14446.3349609375),CFrame.new(-1310.500366,26.016523,-14562.404296),nil},
+{2425,2449,"CandyQuest1",CFrame.new(-1150.0400390625,20.378934860229492,-14446.3349609375),CFrame.new(-880.200622,71.247764,-14538.609375),nil},
+{2450,2474,"TikiQuest1",CFrame.new(-16547.748046875,61.13533401489258,-173.41360473632812),CFrame.new(-16442.814453,116.138999,-264.463775),nil},
+{2475,2524,"TikiQuest1",CFrame.new(-16547.748046875,61.13533401489258,-173.41360473632812),CFrame.new(-16901.261718,84.067565,-192.889068),nil},
+{2525,2549,"TikiQuest2",CFrame.new(-16539.078125,55.68632888793945,1051.5738525390625),CFrame.new(-16641.679687,235.782546,1031.282958),nil},
+{2550,2574,"TikiQuest3",CFrame.new(-16665.1914,104.596405,1579.69434,0.951068401,-0,-0.308980465,0,1,-0,0.308980465,0,0.951068401),CFrame.new(-16521.0625,106.09285,1488.78467),nil},
+{2575,2599,"TikiQuest3",CFrame.new(-16665.1914,104.596405,1579.69434,0.951068401,-0,-0.308980465,0,1,-0,0.308980465,0,0.951068401),CFrame.new(-16887.730468,113.074638,1629.977783),nil},
+{2600,2624,"SubmergedQuest1",CFrame.new(10778.875,-2087.72437,9265.18359,0.934615612,-9.33109447e-08,-0.355659455,9.17655143e-08,1,-2.12154276e-08,0.355659455,-1.28090019e-08,0.934615612),CFrame.new(11019.131835,-2146.068115,9342.391601),"sub"},
+{2625,2649,"SubmergedQuest1",CFrame.new(10778.875,-2087.72437,9265.18359,0.934615612,-9.33109447e-08,-0.355659455,9.17655143e-08,1,-2.12154276e-08,0.355659455,-1.28090019e-08,0.934615612),CFrame.new(10808.600585,-2030.361450,9364.233398),"sub"},
+{2650,2674,"SubmergedQuest2",CFrame.new(10880.6855,-2086.20044,10032.624,-0.321384728,9.87648434e-08,-0.946948707,7.13271007e-08,1,8.00902953e-08,0.946948707,-4.18033075e-08,-0.321384728),CFrame.new(10671.271484,-2057.591552,10047.258789),"sub"},
+{2675,2699,"SubmergedQuest2",CFrame.new(10880.6855,-2086.20044,10032.624,-0.321384728,9.87648434e-08,-0.946948707,7.13271007e-08,1,8.00902953e-08,0.946948707,-4.18033075e-08,-0.321384728),CFrame.new(11008.519531,-2007.728393,10223.079101),"sub"},
+{2700,2724,"SubmergedQuest3",CFrame.new(9640.08789,-1992.44507,9613.65234,-0.957327187,4.11991223e-08,0.289006323,1.5775445e-08,1,-9.02985846e-08,-0.289006323,-8.18860855e-08,-0.957327187),CFrame.new(9750.416015,-1966.938842,9753.360351),"sub"},
+{2725,9999,"SubmergedQuest3",CFrame.new(9640.08789,-1992.44507,9613.65234,-0.957327187,4.11991223e-08,0.289006323,1.5775445e-08,1,-9.02985846e-08,-0.289006323,-8.18860855e-08,-0.957327187),CFrame.new(9611.705078,-1993.471191,9882.688476),"sub"},
 }
 
-local function getPlayerLevel()
-    local stats = LocalPlayer:FindFirstChild("leaderstats")
-    if stats then
-        local lv = stats:FindFirstChild("Level") or stats:FindFirstChild("Lv")
-        if lv then return tonumber(lv.Value) or 1 end
-    end
+local function getLv()
+    local ok,v=pcall(function()return LP.Data.Level.Value end)
+    if ok and v then return v end
+    local s=LP:FindFirstChild("leaderstats")
+    if s then local l=s:FindFirstChild("Level")or s:FindFirstChild("Lv");if l then return tonumber(l.Value)or 1 end end
     return 1
 end
 
-local function getQuestData(lv)
-    for i = #QuestData, 1, -1 do
-        local d = QuestData[i]
-        if lv >= d[1] then
-            return {
-                minLv    = d[1],
-                maxLv    = d[2],
-                questNPC = d[3],  -- tên NPC Model
-                npcTitle = d[4],  -- tên hiển thị
-                mobName  = d[5],  -- tên mob
-            }
-        end
-    end
-    return { minLv=1, maxLv=15, questNPC=QuestData[1][3], npcTitle=QuestData[1][4], mobName=QuestData[1][5] }
+local function getQD(lv)
+    for i=#QD,1,-1 do if lv>=QD[i][1] then return{questName=QD[i][3],cfQ=QD[i][4],cfM=QD[i][5],ent=QD[i][6]} end end
+    return{questName=QD[1][3],cfQ=QD[1][4],cfM=QD[1][5],ent=nil}
 end
 
--- =====================================================
 -- STATE
--- =====================================================
-local S = {
-    farm      = false,
-    bring     = false,
-    quest     = false,
-    active    = false,
-    questBusy = false,
-    target    = nil,
-    noFallConn = nil,
-    bringCount = 2,
-    bringRange = 300,
-    origGravity = workspace.Gravity,
-}
+local S={farm=false,bring=false,quest=false,active=false,qBusy=false,
+         target=nil,nfc=nil,brc=nil,htc=nil,bc=5,origG=workspace.Gravity}
 
--- =====================================================
--- CHAR HELPERS
--- =====================================================
-local function getRoot()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
+local function R() return LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") end
+local function H() return LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") end
 
-local function getHum()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChildOfClass("Humanoid")
-end
-
-local function resetState()
-    S.active = false
-    S.target = nil
-    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
-    workspace.Gravity = S.origGravity
-    local c = LocalPlayer.Character
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
-    if h then
-        h.WalkSpeed = 16; h.JumpPower = 50
-        h.PlatformStand = false; h.AutoRotate = true
-    end
-    local r = c:FindFirstChild("HumanoidRootPart")
-    if r then
-        r.Velocity = Vector3.zero
-        r.AssemblyLinearVelocity = Vector3.zero
-    end
-    for _, p in ipairs(c:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide = true end
-    end
+local function resetChar()
+    S.active=false;S.target=nil
+    if S.nfc then S.nfc:Disconnect();S.nfc=nil end
+    workspace.Gravity=S.origG
+    local c=LP.Character;if not c then return end
+    local h=c:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=16;h.JumpPower=50;h.PlatformStand=false;h.AutoRotate=true end
+    local r=c:FindFirstChild("HumanoidRootPart")
+    if r then r.Velocity=Vector3.zero;r.AssemblyLinearVelocity=Vector3.zero end
+    for _,p in ipairs(c:GetDescendants())do if p:IsA("BasePart")then p.CanCollide=true end end
 end
 
 local function lockChar()
-    local c = LocalPlayer.Character
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
-    if h then
-        h.WalkSpeed = 0; h.JumpPower = 0
-        h.PlatformStand = true; h.AutoRotate = false
-    end
-    for _, p in ipairs(c:GetDescendants()) do
-        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
-            p.CanCollide = false
-        end
+    local c=LP.Character;if not c then return end
+    local h=c:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=0;h.JumpPower=0;h.PlatformStand=true;h.AutoRotate=false end
+    for _,p in ipairs(c:GetDescendants())do
+        if p:IsA("BasePart")and p.Name~="HumanoidRootPart" then p.CanCollide=false end
     end
 end
 
--- =====================================================
--- NOFAIL — ghim trên đầu mob, chống tuột
--- =====================================================
-local function startNoFall(mob)
-    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
-    workspace.Gravity = 0
-    lockChar()
-
-    S.noFallConn = RunService.RenderStepped:Connect(function()
+-- NOFAIL Y+18
+local function startNF(mob)
+    if S.nfc then S.nfc:Disconnect();S.nfc=nil end
+    workspace.Gravity=0;lockChar()
+    S.nfc=RunService.RenderStepped:Connect(function()
         if not S.active then return end
-        local r  = getRoot()
-        if not r or not mob or not mob.Parent then return end
-        local er = mob:FindFirstChild("HumanoidRootPart")
-        local eh = mob:FindFirstChildOfClass("Humanoid")
-        if not er or not eh or eh.Health <= 0 then return end
-        -- Ghim vị trí + reset velocity mỗi frame
-        r.CFrame               = er.CFrame * CFrame.new(0, 10, 0)
-        r.Velocity             = Vector3.zero
-        r.RotVelocity          = Vector3.zero
-        r.AssemblyLinearVelocity  = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
+        local r=R();if not r or not mob or not mob.Parent then return end
+        local er=mob:FindFirstChild("HumanoidRootPart")
+        local eh=mob:FindFirstChildOfClass("Humanoid")
+        if not er or not eh or eh.Health<=0 then return end
+        r.CFrame=er.CFrame*CFrame.new(0,18,0)
+        r.Velocity=Vector3.zero;r.RotVelocity=Vector3.zero
+        r.AssemblyLinearVelocity=Vector3.zero;r.AssemblyAngularVelocity=Vector3.zero
     end)
 end
 
--- =====================================================
--- FLY TO — bay đến vị trí bằng RenderStepped Lerp
--- Không dùng Tween vì hay bị block bởi NoFall
--- =====================================================
-local function flyTo(pos, speed)
-    speed = speed or 200
-    if S.noFallConn then S.noFallConn:Disconnect(); S.noFallConn = nil end
-    workspace.Gravity = 0
-    lockChar()
-
-    local done = false
-    local conn
-    conn = RunService.RenderStepped:Connect(function(dt)
-        local r = getRoot()
-        if not r then conn:Disconnect(); done = true; return end
-        local diff = pos - r.Position
-        if diff.Magnitude < 4 then
-            r.CFrame = CFrame.new(pos)
-            r.Velocity = Vector3.zero
-            r.AssemblyLinearVelocity = Vector3.zero
-            conn:Disconnect(); done = true; return
+-- FLY TO — smooth lerp
+local function flyTo(pos,spd)
+    spd=spd or 300
+    if S.nfc then S.nfc:Disconnect();S.nfc=nil end
+    workspace.Gravity=0;lockChar()
+    local done=false;local cn
+    cn=RunService.RenderStepped:Connect(function(dt)
+        local r=R();if not r then cn:Disconnect();done=true;return end
+        local d=pos-r.Position
+        if d.Magnitude<4 then
+            r.CFrame=CFrame.new(pos);r.Velocity=Vector3.zero;r.AssemblyLinearVelocity=Vector3.zero
+            cn:Disconnect();done=true;return
         end
-        local step = math.min(speed * dt, diff.Magnitude)
-        r.CFrame = CFrame.new(r.Position + diff.Unit * step)
-        r.Velocity = Vector3.zero
-        r.AssemblyLinearVelocity = Vector3.zero
+        r.CFrame=CFrame.new(r.Position+d.Unit*math.min(spd*dt,d.Magnitude))
+        r.Velocity=Vector3.zero;r.AssemblyLinearVelocity=Vector3.zero
     end)
-
-    local t = 0
-    repeat task.wait(0.05); t += 0.05 until done or t >= 12
+    local t=0;repeat task.wait(0.05);t+=0.05 until done or t>=15
 end
 
--- =====================================================
--- FIND MOBS — quét folder Enemies
--- =====================================================
-local function findMobs(fromPos, maxDist)
-    local Enemies = workspace:FindFirstChild("Enemies")
-    if not Enemies then return nil, math.huge, {} end
-
-    local closest, closestDist = nil, maxDist or math.huge
-    local nearby = {}
-
-    for _, e in ipairs(Enemies:GetChildren()) do
-        if not e:IsA("Model") then continue end
-        local eh = e:FindFirstChildOfClass("Humanoid")
-        local er = e:FindFirstChild("HumanoidRootPart")
-        if not eh or eh.Health <= 0 or not er then continue end
-        local dist = (fromPos - er.Position).Magnitude
-        if dist <= (maxDist or math.huge) then
-            table.insert(nearby, { mob = e, dist = dist })
-            if dist < closestDist then
-                closestDist = dist
-                closest = e
+-- HITBOX EXPANDER — mở rộng hitbox mob để đánh từ trên cao
+local function startHitbox()
+    if S.htc then return end
+    S.htc=RunService.Heartbeat:Connect(function()
+        if not S.farm then S.htc:Disconnect();S.htc=nil;return end
+        local E=workspace:FindFirstChild("Enemies");if not E then return end
+        for _,e in ipairs(E:GetChildren())do
+            if not e:IsA("Model")then continue end
+            local eh=e:FindFirstChildOfClass("Humanoid")
+            if not eh or eh.Health<=0 then continue end
+            for _,p in ipairs(e:GetDescendants())do
+                if p:IsA("BasePart")and p.Size.Magnitude<30 then
+                    pcall(function()p.Size=Vector3.new(25,25,25)end)
+                end
             end
         end
-    end
-
-    return closest, closestDist, nearby
+    end)
 end
 
--- =====================================================
--- BRING MOB
--- Dùng Humanoid:MoveTo vì mob NetworkOwner = Server
--- Client không set CFrame mob được → MoveTo hợp lệ
--- =====================================================
--- =====================================================
--- BRING MOB — set CFrame mỗi RenderStepped
--- Server replication ~30fps, RenderStepped ~60fps
--- → client kịp set trước server override
--- =====================================================
-local bringConn = nil
-
+-- BRING MOB — RenderStepped set CFrame mỗi frame + freeze mob
 local function startBring()
-    if bringConn then bringConn:Disconnect() end
-
-    bringConn = RunService.RenderStepped:Connect(function()
-        if not S.bring or not S.farm then
-            bringConn:Disconnect(); bringConn = nil
-            return
-        end
-        local r = getRoot()
-        if not r then return end
-        local Enemies = workspace:FindFirstChild("Enemies")
-        if not Enemies then return end
-
-        local count = 0
-        for _, e in ipairs(Enemies:GetChildren()) do
-            if count >= S.bringCount then break end
-            if not e:IsA("Model") then continue end
-            local eh = e:FindFirstChildOfClass("Humanoid")
-            local er = e:FindFirstChild("HumanoidRootPart")
-            if not eh or eh.Health <= 0 or not er then continue end
-
-            local dist = (r.Position - er.Position).Magnitude
-            if dist > S.bringRange or dist < 5 then continue end
-
-            -- Set CFrame mỗi frame — nhanh hơn server replication
-            local lockPos = r.Position + Vector3.new(
-                math.random(-6,6), 0, math.random(-6,6)
-            )
+    if S.brc then S.brc:Disconnect();S.brc=nil end
+    S.brc=RunService.RenderStepped:Connect(function()
+        if not S.bring or not S.farm then S.brc:Disconnect();S.brc=nil;return end
+        local r=R();if not r then return end
+        local E=workspace:FindFirstChild("Enemies");if not E then return end
+        local n=0
+        for _,e in ipairs(E:GetChildren())do
+            if n>=S.bc then break end
+            if not e:IsA("Model")then continue end
+            local eh=e:FindFirstChildOfClass("Humanoid")
+            local er=e:FindFirstChild("HumanoidRootPart")
+            if not eh or eh.Health<=0 or not er then continue end
+            local dist=(r.Position-er.Position).Magnitude
+            if dist>3000 or dist<3 then continue end
+            local lp=r.Position+Vector3.new(math.random(-5,5),0,math.random(-5,5))
             pcall(function()
-                er.CFrame = CFrame.new(lockPos)
-                er.Velocity = Vector3.zero
-                er.AssemblyLinearVelocity = Vector3.zero
-            end)
-
-            -- Destroy Animator để mob không tự đi
-            pcall(function()
-                for _, desc in ipairs(e:GetDescendants()) do
-                    if desc:IsA("Animator") or desc.Name == "Animate" then
-                        desc:Destroy()
+                er.CFrame=CFrame.new(lp)
+                er.Velocity=Vector3.zero
+                er.AssemblyLinearVelocity=Vector3.zero
+                er.AssemblyAngularVelocity=Vector3.zero
+                -- Freeze mob: destroy Animator + WalkSpeed=0
+                for _,d in ipairs(e:GetDescendants())do
+                    if d:IsA("Animator")or d.Name=="Animate" then
+                        pcall(function()d:Destroy()end)
                     end
                 end
+                eh.WalkSpeed=0;eh.JumpPower=0
             end)
-
-            count += 1
+            n+=1
         end
     end)
 end
 
-local function restoreMobs()
-    if bringConn then bringConn:Disconnect(); bringConn = nil end
+local function stopBring()
+    if S.brc then S.brc:Disconnect();S.brc=nil end
 end
 
--- =====================================================
--- AUTO QUEST
--- 1. Check level hiện tại
--- 2. Tìm NPC quest trong workspace
--- 3. Bay đến NPC
--- 4. FireServer QuestUpdate
--- 5. Bay lại mob tiếp tục farm
--- =====================================================
--- Hook QuestRemote để lấy args thật khi tự nhận quest
-local realQuestArgs = nil
-pcall(function()
-    local mt  = getrawmetatable(game)
-    local old = mt.__namecall
-    setreadonly(mt, false)
-    local orig = old
-    mt.__namecall = newcclosure(function(self, ...)
-        if getnamecallmethod() == "FireServer" and self == QuestRemote then
-            realQuestArgs = {...}
-            print("[VexzHub] Quest args captured:", ...)
+-- AUTO QUEST — teleport đến CFrameQuest thật, FireServer, bay đến CFrameMon
+local function doQuest()
+    if S.qBusy then return end
+    S.qBusy=true
+    local lv=getLv()
+    local d=getQD(lv)
+    print("[VexzHub] Quest Lv",lv,"->",d.questName)
+    local r=R();if not r then S.qBusy=false;return end
+
+    -- Xử lý entrance nếu cần
+    local dist=(r.Position-d.cfQ.Position).Magnitude
+    if dist>5000 and d.ent then
+        if d.ent=="sub" then
+            -- Teleport đến tàu ngầm
+            pcall(function()r.CFrame=CFrame.new(-16269.7041,25.2288494,1373.65955,0.997390985,1.47309942e-09,-0.0721890926,-4.00651912e-09,0.99999994,-2.51183763e-09,0.0721890852,5.75363091e-10,0.997390926)end)
+            task.wait(2)
+            pcall(function()
+                local rf=RS.Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak")
+                if rf then rf:InvokeServer("TravelToSubmergedIsland") end
+            end)
+            task.wait(3)
+        elseif typeof(d.ent)=="Vector3" then
+            pcall(function()CommF:InvokeServer("requestEntrance",d.ent)end)
+            task.wait(2)
         end
-        return orig(self, ...)
+    end
+
+    -- Teleport đến NPC (CFrameQuest chính xác)
+    r=R()
+    if r then pcall(function()r.CFrame=d.cfQ end) end
+    task.wait(0.8)
+
+    -- FireServer nhận quest
+    pcall(function()
+        if QuestRemote then
+            QuestRemote:FireServer(d.questName,true)
+            print("[VexzHub] Quest OK:",d.questName)
+        end
     end)
-    setreadonly(mt, true)
-end)
+    task.wait(0.4)
 
-local function doAcceptQuest()
-    if S.questBusy then return end
-    S.questBusy = true
-
-    local lv   = getPlayerLevel()
-    local data = getQuestData(lv)
-    print("[VexzHub] Quest Lv", lv, "-> NPC:", data.questNPC, "| Mob:", data.mobName)
-
-    -- Bước 1: Tìm NPC trong workspace
-    -- Blox Fruits NPC quest thường nằm trong workspace trực tiếp
-    -- Tìm theo tên NPC hoặc ProximityPrompt
-    local npcPart = nil
-    local bestDist = math.huge
-    local r0 = getRoot()
-    if not r0 then S.questBusy = false; return end
-
-    -- Quét tất cả descendants, tìm Part/Model gần nhất
-    -- có tên chứa "Quest" hoặc tên NPC
-    for _, v in pairs(workspace:GetDescendants()) do
-        -- Ưu tiên ProximityPrompt vì đây là cách chính xác nhất
-        if v:IsA("ProximityPrompt") then
-            local part = v.Parent
-            if part and part:IsA("BasePart") then
-                local dist = (r0.Position - part.Position).Magnitude
-                if dist < bestDist and dist < 3000 then
-                    bestDist = dist
-                    npcPart  = part
-                end
-            end
-        end
+    -- Teleport đến vị trí mob (CFrameMon chính xác)
+    r=R()
+    if r then
+        pcall(function()r.CFrame=d.cfM end)
     end
-
-    -- Fallback: tìm Model tên chứa "Quest"
-    if not npcPart then
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Model") then
-                local lower = v.Name:lower()
-                if lower:find("quest") or lower:find("giver") then
-                    local root = v:FindFirstChild("HumanoidRootPart")
-                        or v:FindFirstChild("Head")
-                        or v.PrimaryPart
-                    if root then
-                        local dist = (r0.Position - root.Position).Magnitude
-                        if dist < bestDist and dist < 3000 then
-                            bestDist = dist
-                            npcPart  = root
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    -- Bước 2: Bay đến NPC
-    if npcPart then
-        print("[VexzHub] Bay đến NPC:", npcPart:GetFullName(), "dist:", math.floor(bestDist))
-        flyTo(npcPart.Position + Vector3.new(0, 3, -5), 300)
-        task.wait(0.8)
-
-        -- Trigger ProximityPrompt nếu có
-        pcall(function()
-            local pp = npcPart:FindFirstChildOfClass("ProximityPrompt")
-                or npcPart.Parent:FindFirstChildOfClass("ProximityPrompt")
-            if pp then
-                fireproximityprompt(pp)
-                print("[VexzHub] Fired ProximityPrompt")
-                task.wait(0.3)
-            end
-        end)
-    else
-        print("[VexzHub] Không tìm thấy NPC, dùng FireServer trực tiếp")
-    end
-
-    -- Bước 3: FireServer
-    -- Dùng real args nếu đã hook, không thì thử nhiều format
-    if realQuestArgs and #realQuestArgs > 0 then
-        pcall(function()
-            local args = table.clone(realQuestArgs)
-            QuestRemote:FireServer(table.unpack(args))
-            print("[VexzHub] FireServer real args OK")
-        end)
-    else
-        -- Thử tên NPC thật
-        local names = {
-            data.questNPC,           -- "Bandit Quest Giver"
-            data.npcTitle,           -- "Bandit"
-            data.questNPC .. " NPC", -- fallback
-        }
-        for _, name in ipairs(names) do
-            pcall(function() QuestRemote:FireServer(name, true)  end)
-            task.wait(0.05)
-            pcall(function() QuestRemote:FireServer(name)        end)
-            task.wait(0.05)
-        end
-        print("[VexzHub] FireServer fallback done")
-    end
-
     task.wait(0.5)
 
-    -- Bước 4: Quay lại farm
+    -- Tìm và bật farm lại
     if S.farm then
-        local rr = getRoot()
-        if rr then
-            local nextMob = findMobs(rr.Position, 2000)
-            if nextMob then
-                local er = nextMob:FindFirstChild("HumanoidRootPart")
-                if er then
-                    flyTo(er.Position + Vector3.new(0, 10, 0), 300)
-                    S.target = nextMob
-                    S.active = true
-                    startNoFall(nextMob)
+        local E=workspace:FindFirstChild("Enemies")
+        if E then
+            r=R()
+            if r then
+                -- Tìm mob gần nhất tại vị trí quest
+                local best,bestDist=nil,math.huge
+                for _,e in ipairs(E:GetChildren())do
+                    if not e:IsA("Model")then continue end
+                    local eh=e:FindFirstChildOfClass("Humanoid")
+                    local er=e:FindFirstChild("HumanoidRootPart")
+                    if not eh or eh.Health<=0 or not er then continue end
+                    local dd=(r.Position-er.Position).Magnitude
+                    if dd<bestDist then bestDist=dd;best=e end
+                end
+                if best then
+                    S.target=best;S.active=true;startNF(best)
+                    print("[VexzHub] Farm lại:",best.Name)
                 end
             end
         end
     end
 
-    S.questBusy = false
-    print("[VexzHub] Quest cycle done!")
+    S.qBusy=false
+    print("[VexzHub] Quest cycle xong!")
 end
 
--- =====================================================
+-- FIND MOBS
+local function findMobs(from,maxD)
+    local E=workspace:FindFirstChild("Enemies")
+    if not E then return nil,math.huge,{} end
+    local cl,cd=nil,maxD or math.huge;local nb={}
+    for _,e in ipairs(E:GetChildren())do
+        if not e:IsA("Model")then continue end
+        local eh=e:FindFirstChildOfClass("Humanoid")
+        local er=e:FindFirstChild("HumanoidRootPart")
+        if not eh or eh.Health<=0 or not er then continue end
+        local d=(from-er.Position).Magnitude
+        if d<=(maxD or math.huge) then
+            table.insert(nb,{mob=e,dist=d})
+            if d<cd then cd=d;cl=e end
+        end
+    end
+    return cl,cd,nb
+end
+
 -- MAIN FARM LOOP
--- =====================================================
 task.spawn(function()
     while true do
         task.wait()
-        if not S.farm or S.questBusy then
-            if S.active and not S.questBusy then resetState() end
-            continue
+        if not S.farm or S.qBusy then
+            if S.active and not S.qBusy then resetChar() end;continue
         end
-
-        local r = getRoot()
-        local h = getHum()
-        if not r or not h or h.Health <= 0 then
-            if S.active then resetState() end
-            task.wait(0.2); continue
+        local r=R();local h=H()
+        if not r or not h or h.Health<=0 then
+            if S.active then resetChar() end;task.wait(0.2);continue
         end
-
-        local closest, closestDist, nearby = findMobs(r.Position, 2000)
-
-        if closest then
-            if not S.active then
-                S.active = true
-                S.target = closest
-                startNoFall(closest)
-            end
-
-            -- Cập nhật target khi mob chết
+        local cl,_,nb=findMobs(r.Position,2000)
+        if cl then
+            if not S.active then S.active=true;S.target=cl;startNF(cl) end
             if S.target then
-                local teh = S.target:FindFirstChildOfClass("Humanoid")
-                if not teh or teh.Health <= 0 or not S.target.Parent then
-                    S.target = closest
-                    startNoFall(closest)
+                local teh=S.target:FindFirstChildOfClass("Humanoid")
+                if not teh or teh.Health<=0 or not S.target.Parent then
+                    S.target=cl;startNF(cl)
                 end
             end
-
-            -- Tấn công tất cả mob gần (300 studs)
-            for _, item in ipairs(nearby) do
+            -- Tấn công mob trong 350 studs (hitbox to nên từ Y+18 vẫn hit)
+            for _,item in ipairs(nb)do
                 if not S.farm then break end
-                if item.dist > 300 then continue end
-                local mob = item.mob
-                local eh = mob:FindFirstChildOfClass("Humanoid")
-                local er = mob:FindFirstChild("HumanoidRootPart")
-                if not eh or eh.Health <= 0 or not er then continue end
-
+                if item.dist>350 then continue end
+                local mob=item.mob
+                local eh=mob:FindFirstChildOfClass("Humanoid")
+                local er=mob:FindFirstChild("HumanoidRootPart")
+                if not eh or eh.Health<=0 or not er then continue end
                 pcall(function()
-                    if realAttackArgs and #realAttackArgs > 0 then
-                        -- Dùng args thật từ hook — đảm bảo dame
-                        local args = table.clone(realAttackArgs)
-                        args[1] = er
-                        AttackRemote:FireServer(table.unpack(args))
+                    if RAA and #RAA>0 then
+                        local a=table.clone(RAA);a[1]=er
+                        AttackRemote:FireServer(table.unpack(a))
                     else
-                        -- Fallback khi chưa hook
-                        AttackRemote:FireServer(er, {})
+                        AttackRemote:FireServer(er,{})
                     end
                 end)
             end
-
-            -- VirtualInput click
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,1)
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,1)
-
+            VIM:SendMouseButtonEvent(0,0,0,true,game,1)
+            VIM:SendMouseButtonEvent(0,0,0,false,game,1)
         else
-            -- Hết mob → bay đàn tiếp theo
-            if S.active then resetState() end
-            if S.farm and not S.questBusy then
-                local r2 = getRoot()
-                if r2 then
-                    local next, dist = findMobs(r2.Position, 2000)
-                    if next then
-                        local er = next:FindFirstChild("HumanoidRootPart")
+            if S.active then resetChar() end
+            if S.farm and not S.qBusy then
+                r=R()
+                if r then
+                    local nx=findMobs(r.Position,5000)
+                    if nx then
+                        local er=nx:FindFirstChild("HumanoidRootPart")
                         if er then
-                            flyTo(er.Position + Vector3.new(0, 10, 0), 300)
-                            S.active = true
-                            S.target = next
-                            startNoFall(next)
+                            flyTo(er.Position+Vector3.new(0,18,0),300)
+                            S.active=true;S.target=nx;startNF(nx)
                         end
                     end
                 end
@@ -569,133 +419,24 @@ task.spawn(function()
     end
 end)
 
--- Bring mob loop mỗi 2s
+-- Quest loop mỗi 30s
 task.spawn(function()
-    while true do
-        task.wait(2)
-        if S.farm and S.bring then bringMobs() end
-    end
-end)
-
--- Auto quest loop — check level mỗi 30s để tìm quest phù hợp
-task.spawn(function()
-    local lastLv = 0
     while true do
         task.wait(30)
-        if not S.farm or not S.quest or S.questBusy then continue end
-        local lv = getPlayerLevel()
-        -- Quest khi level thay đổi hoặc mỗi 30s
-        if lv ~= lastLv or true then
-            lastLv = lv
-            task.spawn(doAcceptQuest)
-        end
+        if S.farm and S.quest and not S.qBusy then task.spawn(doQuest) end
     end
 end)
 
--- =====================================================
--- KẾT NỐI VÀO CÁC TOGGLE ĐÃ CÓ TRONG UI
--- =====================================================
+-- Hitbox auto start khi farm
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if S.farm and not S.htc then startHitbox() end
+        if not S.farm and S.htc then S.htc:Disconnect();S.htc=nil end
+    end
+end)
 
 
--- Tabs
-ShopTab = Window:AddTab("Shop");
-StatusServerTab = Window:AddTab("Status And Server");
-LocalplayerTab = Window:AddTab("Localplayer");
-SettingFarmTab = Window:AddTab("Setting Farm");
-HoldSelectSkillTab = Window:AddTab("Hold And Select Skill");
-FarmingTab = Window:AddTab("Farming");
-
--- ===================== SHOP TAB =====================
-local MiscShop = ShopTab:AddLeftGroupbox("Misc Shop");
-MiscShop:AddButton({ Title = "Redeem Code", Callback = function() end });
-MiscShop:AddButton({ Title = "Teleport Old World", Callback = function() end });
-MiscShop:AddButton({ Title = "Teleport New World", Callback = function() end });
-MiscShop:AddButton({ Title = "Teleport Third Sea", Callback = function() end });
-MiscShop:AddButton({ Title = "Reroll Race", Callback = function() end });
-MiscShop:AddButton({ Title = "Reset Stats", Callback = function() end });
-MiscShop:AddButton({ Title = "Buy Race Cyborg", Callback = function() end });
-MiscShop:AddButton({ Title = "Buy Race Ghoul", Callback = function() end });
-
-local FightingShop = ShopTab:AddLeftGroupbox("Fighting Shop");
-FightingShop:AddToggle("ToggleBlackLeg", { Title = "Black Leg", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleFishmanKarate", { Title = "Fishman Karate", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleElectro", { Title = "Electro", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleDragonBreath", { Title = "Dragon Breath", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleSuperHuman", { Title = "SuperHuman", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleDeathStep", { Title = "Death Step", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleSharkmanKarate", { Title = "Sharkman Karate", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleElectricClaw", { Title = "Electric Claw", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleDragonTalon", { Title = "Dragon Talon", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleGodHuman", { Title = "God Human", Default = false, Callback = function(v) end });
-FightingShop:AddToggle("ToggleSanguineArt", { Title = "Sanguine Art", Default = false, Callback = function(v) end });
-
-local AbilitiesShop = ShopTab:AddLeftGroupbox("Abilities Shop");
-AbilitiesShop:AddButton({ Title = "Skyjump [ $10,000 Beli ]", Callback = function() end });
-AbilitiesShop:AddButton({ Title = "Buso Haki [ $25,000 Beli ]", Callback = function() end });
-AbilitiesShop:AddButton({ Title = "Observation Haki [ $750,000 Beli ]", Callback = function() end });
-AbilitiesShop:AddButton({ Title = "Soru [ $100,000 Beli ]", Callback = function() end });
-
--- ===================== STATUS AND SERVER TAB =====================
-task.wait(0)
-local StatusSection = StatusServerTab:AddLeftGroupbox("Status");
-StatusSection:AddLabel("Timer: 0h 0m 0s");
-StatusSection:AddLabel("Server Timer: 0h 0m 0s");
-StatusSection:AddLabel("Next Time Spawn Fist of Darkness or God's Chalice: 0h 0m 0s");
-StatusSection:AddLabel("Elite Hunter: X");
-StatusSection:AddLabel("Tyrant Eyes: 0 Eyes");
-StatusSection:AddLabel("Cake Prince: 500 Mobs");
-StatusSection:AddLabel("Leviathan: ...");
-StatusSection:AddLabel("Mirage Island: X");
-StatusSection:AddLabel("Prehistoric Island: X");
-StatusSection:AddLabel("Frozen Dimension: X");
-StatusSection:AddLabel("Moon Phase: ... | ... (...)");
-StatusSection:AddLabel("Ancient One: ...");
-
-local ServerSection = StatusServerTab:AddLeftGroupbox("Server");
-ServerSection:AddLabel("PlaceId: ...");
-
--- ===================== LOCALPLAYER TAB =====================
-task.wait(0)
-local LocalPlayerSection = LocalplayerTab:AddLeftGroupbox("Local Player");
-LocalPlayerSection:AddButton({ Title = "Stop Tween", Callback = function() end });
-LocalPlayerSection:AddButton({ Title = "Fix UI Button Game", Callback = function() end });
-LocalPlayerSection:AddDropdown("SelectStats", {
-    Title = "Select Stats",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-LocalPlayerSection:AddToggle("AutoStats", { Title = "Auto Stats", Default = false, Callback = function(v) end });
-LocalPlayerSection:AddDropdown("SelectTeam", {
-    Title = "Select Team",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-LocalPlayerSection:AddButton({ Title = "Change Team", Callback = function() end });
-LocalPlayerSection:AddToggle("Noclip", { Title = "Noclip", Default = false, Callback = function(v) end });
-LocalPlayerSection:AddDropdown("SelectNpc", {
-    Title = "Select Npc",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-LocalPlayerSection:AddToggle("TeleportToNpc", { Title = "Teleport To Npc", Default = false, Callback = function(v) end });
-LocalPlayerSection:AddDropdown("SelectIsland", {
-    Title = "Select Island",
-    Values = {},
-    Default = nil,
-    Multi = false,
-    Callback = function(v) end,
-});
-LocalPlayerSection:AddToggle("TeleportToIsland", { Title = "Teleport To Island", Default = false, Callback = function(v) end });
-LocalPlayerSection:AddToggle("TeleportMirage", { Title = "Teleport Mirage", Default = false, Callback = function(v) end });
-LocalPlayerSection:AddToggle("TeleportPrehistoricIsland", { Title = "Teleport Prehistoric Island", Default = false, Callback = function(v) end });
-
--- ===================== SETTING FARM TAB =====================
 task.wait(0)
 local SettingFarmSection = SettingFarmTab:AddLeftGroupbox("Setting Farm");
 SettingFarmSection:AddDropdown("SelectWeapon", {
@@ -724,20 +465,13 @@ SettingFarmSection:AddSlider({
 });
 SettingFarmSection:AddSlider({
     Title = "Bring Mob Count",
-    Min = 2, Max = 6, Default = 2,
-    Callback = function(v)
-        S.bringCount = v
-    end,
+    Min = 1, Max = 30, Default = 5,
+    Callback = function(v) S.bc = v end,
 });
 SettingFarmSection:AddToggle("BringMob", { Title = "Bring Mob", Default = false, Callback = function(v)
     S.bring = v
-    if v then
-        startBring()
-        print("[VexzHub] Bring Mob: ON")
-    else
-        restoreMobs()
-        print("[VexzHub] Bring Mob: OFF")
-    end
+    if v then startBring() else stopBring() end
+    print("[VexzHub] Bring Mob:", v)
 end });
 SettingFarmSection:AddSlider({
     Title = "Speed Tween",
@@ -823,32 +557,29 @@ FarmingSection:AddSlider({
 });
 FarmingSection:AddToggle("IgnoreAttackKatakuri", { Title = "Ignore Attack Katakuri", Default = false, Callback = function(v) end });
 FarmingSection:AddToggle("HopFindKatakuri", { Title = "Hop Find Katakuri", Default = false, Callback = function(v) end });
-FarmingSection:AddToggle("AutoQuestKatakuri", { Title = "Auto Quest [Auto Level 1-2800]", Default = false, Callback = function(v)
+FarmingSection:AddToggle("AutoQuestKatakuri", { Title = "Auto Quest [Lv 1-2800]", Default = false, Callback = function(v)
     S.quest = v
-    if v and S.farm and not S.questBusy then
-        task.spawn(doAcceptQuest)
-    end
+    if v and S.farm and not S.qBusy then task.spawn(doQuest) end
     print("[VexzHub] Auto Quest:", v)
 end });
 FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, Callback = function(v)
     S.farm = v
-    if not v and S.active then resetState() end
-    if v then
-        -- Khi bật farm: nhận quest trước nếu autoquest bật
-        if S.quest then task.spawn(doAcceptQuest) end
-        -- Sau đó tìm mob
+    if not v then
+        resetChar(); stopBring()
+        if S.htc then S.htc:Disconnect(); S.htc=nil end
+    else
+        startHitbox()
+        if S.quest then task.spawn(doQuest) end
         task.spawn(function()
-            task.wait(S.quest and 2 or 0)
-            local r = getRoot()
+            task.wait(S.quest and 3 or 0)
+            local r=R()
             if r then
-                local next = (findMobs(r.Position, 2000))
-                if next then
-                    local er = next:FindFirstChild("HumanoidRootPart")
+                local nx=findMobs(r.Position,2000)
+                if nx then
+                    local er=nx:FindFirstChild("HumanoidRootPart")
                     if er then
-                        flyTo(er.Position + Vector3.new(0,10,0), 300)
-                        S.active = true
-                        S.target = next
-                        startNoFall(next)
+                        flyTo(er.Position+Vector3.new(0,18,0),300)
+                        S.active=true;S.target=nx;startNF(nx)
                     end
                 end
             end
