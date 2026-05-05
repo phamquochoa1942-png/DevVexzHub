@@ -104,4 +104,4 @@ task.spawn(function()
     end
 end)
 
-print("[Fast Attack] ON | Hash:", HASH) 
+print("[Fast Attack] ON | Hash:", HASH)
