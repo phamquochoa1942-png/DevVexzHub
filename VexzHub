@@ -1131,101 +1131,221 @@ local function topos(pos)
     end)
 end
 
-task.spawn(function()
-    while task.wait() do
-        if StartFarm then
-            pcall(function()
-                local char = LP.Character
-                if not char then return end
-                local root = char:FindFirstChild("HumanoidRootPart")
-                if not root then return end
-                
-                CheckQuest()
-                
-                if not Mon then return end
-                
-                local QuestTitle = LP.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text
-                
-                -- FIX: đọc quest GUI an toàn, tránh crash nil
-                local questVisible = false
-                local questTitle = ""
-                pcall(function()
-                    local questGui = LP.PlayerGui:FindFirstChild("Main")
-                    if questGui then
-                        local questFrame = questGui:FindFirstChild("Quest")
-                        if questFrame then
-                            questVisible = questFrame.Visible
-                            local container = questFrame:FindFirstChild("Container")
-                            if container then
-                                local titleFrame = container:FindFirstChild("QuestTitle")
-                                if titleFrame then
-                                    local titleLabel = titleFrame:FindFirstChild("Title")
-                                    if titleLabel then
-                                        questTitle = titleLabel.Text or ""
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end)
+-- ══════════════════════════════════════════════════
+-- AUTO FARM + AUTO QUEST tích hợp
+-- Logic: Quest → Bay mob → Farm → Hết mob → Quest lại
+-- ══════════════════════════════════════════════════
 
-                -- Nếu có quest đang chạy nhưng sai mob → abandon
-                if questVisible and questTitle ~= "" and NameMon and not string.find(questTitle, NameMon) then
-                    pcall(function()
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
-                    end)
-                end
+-- Teleport BLOCKING: chờ đến nơi mới return
+local function flyTo(targetCF, maxWait)
+    local char = LP.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
 
-                -- Nếu chưa có quest → bay đến NPC nhận quest
-                if not questVisible then
-                    topos(CFrameQuest)
-                    task.wait(0.5)
-                    -- Kiểm tra đã đến gần NPC chưa
-                    local distToQuest = (root.Position - CFrameQuest.Position).Magnitude
-                    if distToQuest <= 25 then
-                        task.wait(1)
-                        pcall(function()
-                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", NameQuest, LevelQuest)
-                        end)
-                        task.wait(0.5)
-                    end
-                    return
-                end
-                
-                local Nearest = GetNearestMob(Mon)
-                
-                if CurrentMob and CurrentMob.Parent and CurrentMob:FindFirstChild("Humanoid") and CurrentMob.Humanoid.Health > 0 then
-                    if CurrentMob:FindFirstChild("HumanoidRootPart") then
-                        FarmPos = CurrentMob.HumanoidRootPart.Position
-                    end
-                    topos(CurrentMob.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
-                    return
-                else
-                    CurrentMob = nil
-                end
-                
-                if not Nearest then
-                    topos(CFrameMon)
-                    return
-                end
-                
-                CurrentMob = Nearest
-                if CurrentMob:FindFirstChild("HumanoidRootPart") then
-                    FarmPos = CurrentMob.HumanoidRootPart.Position
-                    topos(CurrentMob.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
-                end
-                
-                repeat
-                    task.wait()
-                    if CurrentMob and CurrentMob:FindFirstChild("HumanoidRootPart") then
-                        FarmPos = CurrentMob.HumanoidRootPart.Position
-                        topos(CurrentMob.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
-                    end
-                until not StartFarm or not CurrentMob.Parent or not CurrentMob:FindFirstChild("Humanoid") or CurrentMob.Humanoid.Health <= 0
-                
-                CurrentMob = nil
-            end)
+    local targetPos = targetCF.Position
+    local dist = (root.Position - targetPos).Magnitude
+    if dist <= 5 then return true end
+
+    -- Tắt gravity + khóa humanoid
+    workspace.Gravity = 0
+    if hum then
+        hum.WalkSpeed = 0
+        hum.JumpPower = 0
+        hum.PlatformStand = true
+    end
+
+    -- Cancel tween cũ
+    if activeTween then activeTween:Cancel(); activeTween = nil end
+
+    local speed = 350
+    local dur = math.clamp(dist / speed, 0.1, maxWait or 5)
+
+    local tween = TweenService:Create(root,
+        TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { CFrame = targetCF }
+    )
+    activeTween = tween
+
+    -- Reset velocity trong lúc bay
+    local velConn = RunService.Heartbeat:Connect(function()
+        if root and root.Parent then
+            root.Velocity = Vector3.zero
+            root.AssemblyLinearVelocity = Vector3.zero
         end
+    end)
+
+    tween:Play()
+    tween.Completed:Wait()  -- BLOCKING: chờ đến nơi
+
+    velConn:Disconnect()
+    activeTween = nil
+
+    -- Khôi phục
+    workspace.Gravity = 196.2
+    if hum then
+        hum.WalkSpeed = 16
+        hum.JumpPower = 50
+        hum.PlatformStand = false
+    end
+
+    return true
+end
+
+-- Đọc trạng thái quest an toàn
+local function getQuestState()
+    local visible = false
+    local title   = ""
+    pcall(function()
+        local main = LP.PlayerGui:FindFirstChild("Main")
+        if not main then return end
+        local qFrame = main:FindFirstChild("Quest")
+        if not qFrame then return end
+        visible = qFrame.Visible
+        -- Thử nhiều đường dẫn khác nhau vì GUI hay thay đổi
+        local function findText(parent)
+            for _, v in ipairs(parent:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Title" then
+                    title = v.Text or ""
+                    return
+                end
+            end
+        end
+        findText(qFrame)
+    end)
+    return visible, title
+end
+
+-- Nhận quest: bay đến NPC → StartQuest
+local function doAcceptQuest()
+    if not PosQ then return false end
+    local char = LP.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+
+    print("[Farm] Bay nhận quest:", NameQuest)
+    flyTo(PosQ, 8)
+    task.wait(0.3)
+
+    -- Kiểm tra đã đến gần NPC
+    if not root or not root.Parent then return false end
+    local dist = (root.Position - PosQ.Position).Magnitude
+    if dist > 30 then
+        print("[Farm] Chưa đến NPC, dist:", dist)
+        return false
+    end
+
+    -- Nhận quest
+    local ok = false
+    pcall(function()
+        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", NameQuest, LevelQuest)
+        ok = true
+    end)
+    task.wait(0.5)
+    print("[Farm] Nhận quest:", NameQuest, "| OK:", ok)
+    return ok
+end
+
+-- Farm loop chính
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if not StartFarm then continue end
+
+        -- Safety check nhân vật
+        local char = LP.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum  = char and char:FindFirstChildOfClass("Humanoid")
+        if not char or not root or not hum or hum.Health <= 0 then
+            task.wait(1)
+            continue
+        end
+
+        -- Lấy data quest cho level hiện tại
+        pcall(function() CheckQuest() end)
+        if not Mon or not NameQuest then
+            task.wait(1)
+            continue
+        end
+
+        -- ─── BƯỚC 1: Kiểm tra và nhận quest ───
+        local questVisible, questTitle = getQuestState()
+
+        -- Abandon quest sai mob
+        if questVisible and questTitle ~= "" and NameMon then
+            if not string.find(questTitle, NameMon) then
+                pcall(function()
+                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
+                end)
+                task.wait(0.5)
+                questVisible = false
+            end
+        end
+
+        -- Nhận quest nếu chưa có
+        if not questVisible then
+            doAcceptQuest()
+            task.wait(0.3)
+            continue  -- Vòng lặp tiếp sẽ check lại quest
+        end
+
+        -- ─── BƯỚC 2: Tìm và bay đến mob ───
+        -- Cập nhật CurrentMob nếu đã chết
+        if CurrentMob then
+            local mh = CurrentMob:FindFirstChildOfClass("Humanoid")
+            if not CurrentMob.Parent or not mh or mh.Health <= 0 then
+                CurrentMob = nil
+            end
+        end
+
+        -- Tìm mob mới nếu cần
+        if not CurrentMob then
+            CurrentMob = GetNearestMob(Mon)
+        end
+
+        -- Không có mob → bay về vị trí mob mặc định
+        if not CurrentMob then
+            if PosM then flyTo(PosM, 5) end
+            task.wait(0.5)
+            continue
+        end
+
+        -- ─── BƯỚC 3: Bay lên đầu mob và farm ───
+        local mobRoot = CurrentMob:FindFirstChild("HumanoidRootPart")
+        if not mobRoot then CurrentMob = nil; continue end
+
+        -- Bay đến Y+15 trên đầu mob
+        local targetCF = mobRoot.CFrame * CFrame.new(0, 15, 0)
+        flyTo(targetCF, 3)
+
+        -- Ghim vị trí trên đầu mob cho đến khi mob chết
+        local lockConn = RunService.Heartbeat:Connect(function()
+            if not StartFarm then return end
+            if not root or not root.Parent then return end
+            if not CurrentMob or not CurrentMob.Parent then return end
+            local mr = CurrentMob:FindFirstChild("HumanoidRootPart")
+            if not mr then return end
+            -- Ghim nhân vật trên đầu mob
+            root.CFrame = mr.CFrame * CFrame.new(0, 15, 0)
+            root.Velocity = Vector3.zero
+            root.AssemblyLinearVelocity = Vector3.zero
+        end)
+
+        workspace.Gravity = 0
+
+        -- Chờ mob chết hoặc farm tắt
+        repeat
+            task.wait(0.1)
+            if not CurrentMob or not CurrentMob.Parent then break end
+            local mh2 = CurrentMob:FindFirstChildOfClass("Humanoid")
+            if not mh2 or mh2.Health <= 0 then break end
+        until not StartFarm
+
+        lockConn:Disconnect()
+        workspace.Gravity = 196.2
+        CurrentMob = nil
     end
 end)
 
