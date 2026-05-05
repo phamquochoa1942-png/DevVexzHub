@@ -1,298 +1,86 @@
--- ╔═══════════════════════════════════════╗
--- ║  FAST ATTACK — by Quoc Hoa           ║
--- ║  Bypass + đánh siêu nhanh            ║
--- ╚═══════════════════════════════════════╝
+-- Fast Attack Bypass — by Quoc Hoa
+-- Kỹ thuật: đánh nhiều mob cùng lúc mỗi frame
+-- → server nhận nhiều hit packet riêng biệt
+-- → damage nhân theo số mob bị hit
+_G.FastAttack = true
 
-local Players             = game:GetService("Players")
-local ReplicatedStorage   = game:GetService("ReplicatedStorage")
-local RunService          = game:GetService("RunService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local LocalPlayer         = Players.LocalPlayer
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService        = game:GetService("RunService")
+local VIM               = game:GetService("VirtualInputManager")
+local LocalPlayer       = Players.LocalPlayer
 
--- =====================================================
--- REMOTE
--- =====================================================
 local HitRemote = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
--- =====================================================
--- BYPASS: Hook để tự lấy hash thật từ game
--- Hash "079baa9c" có thể đổi sau update
--- Hook sẽ tự cập nhật hash mới nhất khi bạn tự đánh 1 lần
--- =====================================================
-local currentHash = "079baa9c"  -- hash mặc định
-
+-- Hook hash tự động
+local hash = "079baa9c"
 pcall(function()
-    local mt  = getrawmetatable(game)
+    local mt = getrawmetatable(game)
     local old = mt.__namecall
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
         if getnamecallmethod() == "FireServer" and self == HitRemote then
-            local args = {...}
-            -- Lấy hash ở index 4 nếu có
-            if args[4] and type(args[4]) == "string" then
-                currentHash = args[4]
+            local a = {...}
+            if type(a[4]) == "string" and #a[4] == 8 then
+                hash = a[4]
+                print("[FA] Hash updated:", hash)
             end
         end
         return old(self, ...)
     end)
     setreadonly(mt, true)
-    print("[FastAttack] Hook OK — hash:", currentHash)
+    print("[FA] Hook OK")
 end)
 
--- =====================================================
--- STATE
--- =====================================================
-_G.FastAttack = true  -- tắt bằng: _G.FastAttack = false
-
-local isClicking      = false
-local currentTarget   = nil
-local noFallConn      = nil
-local originalGravity = workspace.Gravity
-
--- =====================================================
--- HELPERS
--- =====================================================
-local function getChar()
-    return LocalPlayer.Character
-end
-
 local function getRoot()
-    local c = getChar()
+    local c = LocalPlayer.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function resetAll()
-    isClicking    = false
-    currentTarget = nil
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = originalGravity
-    local c = getChar()
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
-    if h then
-        h.WalkSpeed     = 16
-        h.JumpPower     = 50
-        h.PlatformStand = false
-    end
-    local r = c:FindFirstChild("HumanoidRootPart")
-    if r then
-        r.Velocity    = Vector3.zero
-        r.RotVelocity = Vector3.zero
-    end
-end
-
--- =====================================================
--- NO FALL — bay lên đầu mob, ghim chặt mỗi frame
--- =====================================================
-local function startNoFall(mob)
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = 0
-
-    local c = getChar()
-    if c then
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if h then
-            h.WalkSpeed     = 0
-            h.JumpPower     = 0
-            h.PlatformStand = true
-        end
-    end
-
-    noFallConn = RunService.Heartbeat:Connect(function()
-        if not _G.FastAttack then return end
-        local root = getRoot()
-        if not root or not mob or not mob.Parent then return end
-        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-        local mobHum  = mob:FindFirstChildOfClass("Humanoid")
-        if not mobRoot or not mobHum or mobHum.Health <= 0 then return end
-
-        -- Bay Y+20 trên đầu mob, reset velocity để không tuột
-        root.CFrame      = mobRoot.CFrame * CFrame.new(0, 20, 0)
-        root.Velocity    = Vector3.zero
-        root.RotVelocity = Vector3.zero
-        root.AssemblyLinearVelocity  = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
--- =====================================================
--- TWEEN đến mob — bay mượt về phía mob
--- =====================================================
-local function tweenToMob(mob)
-    local root    = getRoot()
-    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-    if not root or not mobRoot then return end
-
-    -- Tắt nofall trong lúc di chuyển
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = originalGravity
-
-    local targetPos = mobRoot.Position + Vector3.new(0, 20, 0)
-    local distance  = (root.Position - targetPos).Magnitude
-    local duration  = math.clamp(distance / 300, 0.05, 0.5)
-
-    local tween = game:GetService("TweenService"):Create(
-        root,
-        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { CFrame = CFrame.new(targetPos) }
-    )
-    tween:Play()
-
-    -- Sau khi tween xong → bật nofall
-    tween.Completed:Connect(function()
-        if _G.FastAttack and currentTarget == mob then
-            startNoFall(mob)
-        end
-    end)
-end
-
--- =====================================================
--- HITBOX — mở rộng hitbox mob để đánh từ trên không
--- =====================================================
-local function expandHitbox(mob)
-    for _, p in ipairs(mob:GetDescendants()) do
-        if p:IsA("BasePart") then
-            pcall(function()
-                if p.Size.Magnitude < 40 then
-                    p.Size = Vector3.new(20, 20, 20)
-                end
-            end)
-        end
-    end
-end
-
--- =====================================================
--- ATTACK MOB — gửi hit remote với hash đúng
--- =====================================================
-local function attackMob(mob)
-    local mobHum  = mob:FindFirstChildOfClass("Humanoid")
-    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-    if not mobHum or mobHum.Health <= 0 or not mobRoot then return end
-
-    -- Ưu tiên các part dễ hit nhất
-    local targetPart = mob:FindFirstChild("HumanoidRootPart")
-        or mob:FindFirstChild("Head")
-        or mob:FindFirstChild("UpperTorso")
-        or mob:FindFirstChild("Torso")
-
-    if not targetPart then return end
-
-    local args = {
-        [1] = targetPart,
-        [2] = {},
-        [4] = currentHash  -- dùng hash thật từ hook
-    }
-
-    pcall(function()
-        HitRemote:FireServer(unpack(args))
-    end)
-end
-
--- =====================================================
--- FIND NEAREST MOB trong folder Enemies
--- =====================================================
-local function findNearestMob(maxDist)
+-- Lấy TẤT CẢ mob trong range để hit cùng lúc
+local function getAllMobs(maxDist)
     local root = getRoot()
-    if not root then return nil end
-
+    if not root then return {} end
     local Enemies = workspace:FindFirstChild("Enemies")
-    if not Enemies then return nil end
+    if not Enemies then return {} end
 
-    local nearest     = nil
-    local nearestDist = maxDist or math.huge
-
+    local list = {}
     for _, e in ipairs(Enemies:GetChildren()) do
         if not e:IsA("Model") then continue end
         local h = e:FindFirstChildOfClass("Humanoid")
         local r = e:FindFirstChild("HumanoidRootPart")
         if not h or h.Health <= 0 or not r then continue end
-        local dist = (root.Position - r.Position).Magnitude
-        if dist < nearestDist then
-            nearestDist = dist
-            nearest     = e
+        if (root.Position - r.Position).Magnitude <= maxDist then
+            table.insert(list, e)
         end
     end
-
-    return nearest
+    return list
 end
 
--- =====================================================
--- FAST CLICK loop — click siêu nhanh mỗi frame
--- =====================================================
+-- Bypass chính:
+-- Gửi hit packet cho TỪNG mob trong range mỗi Heartbeat
+-- Server xử lý mỗi packet độc lập → không bị throttle chung
 RunService.Heartbeat:Connect(function()
-    if _G.FastAttack and isClicking then
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    end
-end)
+    if not _G.FastAttack then return end
 
--- Click phụ để tăng tốc
-task.spawn(function()
-    while true do
-        if _G.FastAttack and isClicking then
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        end
-        task.wait(0.001)
-    end
-end)
+    local mobs = getAllMobs(150)  -- hit tất cả mob trong 150 studs
+    if #mobs == 0 then return end
 
--- =====================================================
--- MAIN LOOP
--- =====================================================
-task.spawn(function()
-    while _G.FastAttack do
-        task.wait()
+    for _, mob in ipairs(mobs) do
+        local h = mob:FindFirstChildOfClass("Humanoid")
+        local r = mob:FindFirstChild("HumanoidRootPart")
+        if not h or h.Health <= 0 or not r then continue end
 
-        local root = getRoot()
-        local char = getChar()
-        if not root or not char then resetAll(); task.wait(0.1); continue end
-
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum or hum.Health <= 0 then resetAll(); task.wait(0.1); continue end
-
-        -- Tìm mob gần nhất
-        local target = findNearestMob(200)
-
-        if target then
-            isClicking = true
-            expandHitbox(target)
-
-            -- Bay đến mob mới nếu target thay đổi
-            if currentTarget ~= target then
-                currentTarget = target
-                tweenToMob(target)
-            end
-
-            -- Mob chết → reset target để tìm mob mới
-            local targetHum = target:FindFirstChildOfClass("Humanoid")
-            if not targetHum or targetHum.Health <= 0 then
-                currentTarget = nil
-                if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-            end
-
-            -- Attack tất cả mob gần (100 studs)
-            local Enemies = workspace:FindFirstChild("Enemies")
-            if Enemies then
-                for _, e in ipairs(Enemies:GetChildren()) do
-                    if not e:IsA("Model") then continue end
-                    local er = e:FindFirstChild("HumanoidRootPart")
-                    if not er then continue end
-                    if (root.Position - er.Position).Magnitude <= 100 then
-                        attackMob(e)
-                    end
-                end
-            end
-        else
-            -- Không có mob → tắt hoàn toàn
-            resetAll()
-        end
+        -- Gửi từng packet riêng biệt cho mỗi mob
+        local args = { [1] = r, [2] = {}, [4] = hash }
+        pcall(function() HitRemote:FireServer(unpack(args)) end)
     end
 
-    -- Tắt hẳn khi _G.FastAttack = false
-    resetAll()
-    print("[FastAttack] Đã tắt")
+    -- VirtualInput click thêm để trigger animation
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 end)
 
-print("[FastAttack] Đã bật — hash:", currentHash)
-print("[FastAttack] Tắt bằng: _G.FastAttack = false")
+print("[FastAttack] ON | hash:", hash)
+print("[FastAttack] OFF: _G.FastAttack = false")
+ 
