@@ -1,16 +1,15 @@
--- Fast Attack MAX — by Quoc Hoa
+-- Fast Attack + Animation Cancel — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService        = game:GetService("RunService")
-local TweenService      = game:GetService("TweenService")
 local VIM               = game:GetService("VirtualInputManager")
 local LocalPlayer       = Players.LocalPlayer
 
 local HitRemote = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
--- Hook hash
+-- Hook hash tự động
 local hash = "079baa9c"
 pcall(function()
     local mt = getrawmetatable(game)
@@ -28,191 +27,110 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
--- State
-local currentTarget = nil
-local noFallConn    = nil
-local origGravity   = workspace.Gravity
-local origSizes     = {}
+-- Từ khóa animation tấn công cần cancel
+local ATTACK_KEYWORDS = {
+    "attack", "slash", "punch", "kick", "hit",
+    "swing", "strike", "combo", "skill", "cast",
+    "shoot", "throw", "smash", "dash", "ability"
+}
 
--- Fix quái to: lưu + restore size
-local function expandHitbox(mob)
-    for _, p in ipairs(mob:GetDescendants()) do
-        if p:IsA("BasePart") and p.Size.X < 8 then
-            if not origSizes[p] then origSizes[p] = p.Size end
-            pcall(function() p.Size = Vector3.new(8, 8, 8) end)
+local function isAttackAnim(track)
+    local id = tostring(track.Animation and track.Animation.AnimationId or ""):lower()
+    local name = track.Name:lower()
+    for _, kw in ipairs(ATTACK_KEYWORDS) do
+        if id:find(kw) or name:find(kw) then return true end
+    end
+    return false
+end
+
+-- Animation Cancel: stop ngay animation tấn công
+local function cancelAttackAnims()
+    local c = LocalPlayer.Character
+    if not c then return end
+    local hum = c:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+        if isAttackAnim(track) then
+            track:Stop(0)  -- stop ngay lập tức, không fade
         end
     end
 end
 
-local function restoreHitbox(mob)
-    for _, p in ipairs(mob:GetDescendants()) do
-        if origSizes[p] then
-            pcall(function() p.Size = origSizes[p] end)
-            origSizes[p] = nil
-        end
-    end
-end
-
+-- Helper
 local function getRoot()
     local c = LocalPlayer.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function resetAll()
-    if currentTarget then restoreHitbox(currentTarget) end
-    currentTarget = nil
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = origGravity
-    local c = LocalPlayer.Character
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
-    if h then h.WalkSpeed=16; h.JumpPower=50; h.PlatformStand=false end
-    local r = c:FindFirstChild("HumanoidRootPart")
-    if r then r.Velocity=Vector3.zero; r.AssemblyLinearVelocity=Vector3.zero end
-end
-
-local function startNoFall(mob)
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = 0
-    local c = LocalPlayer.Character
-    if c then
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if h then h.WalkSpeed=0; h.JumpPower=0; h.PlatformStand=true end
-    end
-    noFallConn = RunService.Heartbeat:Connect(function()
-        if not _G.FastAttack then return end
-        local r  = getRoot()
-        local mr = mob and mob.Parent and mob:FindFirstChild("HumanoidRootPart")
-        local mh = mob and mob:FindFirstChildOfClass("Humanoid")
-        if not r or not mr or not mh or mh.Health <= 0 then return end
-        r.CFrame = mr.CFrame * CFrame.new(0, 20, 0)
-        r.Velocity = Vector3.zero; r.RotVelocity = Vector3.zero
-        r.AssemblyLinearVelocity = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
-    end)
-end
-
-local function tweenToMob(mob)
-    local r  = getRoot()
-    local mr = mob:FindFirstChild("HumanoidRootPart")
-    if not r or not mr then return end
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = origGravity
-    local targetPos = mr.Position + Vector3.new(0, 20, 0)
-    local dur = math.clamp((r.Position - targetPos).Magnitude / 500, 0.05, 0.4)
-    local tw = TweenService:Create(r,
-        TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { CFrame = CFrame.new(targetPos) }
-    )
-    tw:Play()
-    tw.Completed:Connect(function()
-        if _G.FastAttack and currentTarget == mob then
-            startNoFall(mob)
-        end
-    end)
-end
-
 local function getMobs(maxDist)
     local r = getRoot()
-    if not r then return nil, {} end
+    if not r then return {} end
     local E = workspace:FindFirstChild("Enemies")
-    if not E then return nil, {} end
-    local nearest, nearestDist = nil, maxDist or math.huge
-    local all = {}
+    if not E then return {} end
+    local list = {}
     for _, e in ipairs(E:GetChildren()) do
         if not e:IsA("Model") then continue end
         local h  = e:FindFirstChildOfClass("Humanoid")
         local er = e:FindFirstChild("HumanoidRootPart")
         if not h or h.Health <= 0 or not er then continue end
-        local d = (r.Position - er.Position).Magnitude
-        if d <= (maxDist or math.huge) then
-            table.insert(all, {mob=e, dist=d})
-            if d < nearestDist then nearestDist=d; nearest=e end
+        if (r.Position - er.Position).Magnitude <= maxDist then
+            table.insert(list, e)
         end
     end
-    return nearest, all
+    return list
 end
 
--- ═══════════════════════════════════════════════════
--- ATTACK LOOP SIÊU NHANH
--- Dùng task.wait(0) thay vì Heartbeat
--- task.wait(0) = yield 1 tick roblox (~1/60s)
--- Nhưng chạy trong while loop riêng → không bị block
--- Gửi HIT cho MỌI mob trong range cùng 1 lúc
--- ═══════════════════════════════════════════════════
+-- ═══════════════════════════════════════════════
+-- CORE LOOP — tốc độ tối đa
+-- task.wait(0) = yield tối thiểu ~1ms
+-- Mỗi iteration:
+--   1. Cancel animation ngay
+--   2. FireServer hit
+--   3. Click ảo
+-- ═══════════════════════════════════════════════
 task.spawn(function()
     while _G.FastAttack do
-        task.wait(0)  -- yield tối thiểu, nhanh nhất có thể
+        task.wait(0)
 
-        local r = getRoot()
-        if not r then continue end
+        local mobs = getMobs(150)
+        if #mobs == 0 then continue end
 
-        local _, allMobs = getMobs(150)
-        if #allMobs == 0 then continue end
+        -- Bước 1: Cancel animation TRƯỚC khi đánh
+        -- → animation vừa bắt đầu bị stop ngay
+        -- → server/client cho phép đòn tiếp theo ngay lập tức
+        cancelAttackAnims()
 
-        for _, item in ipairs(allMobs) do
-            local mob = item.mob
-            local mh  = mob:FindFirstChildOfClass("Humanoid")
-            local mr  = mob:FindFirstChild("HumanoidRootPart")
+        -- Bước 2: FireServer cho từng mob
+        for _, mob in ipairs(mobs) do
+            local mh = mob:FindFirstChildOfClass("Humanoid")
+            local mr = mob:FindFirstChild("HumanoidRootPart")
             if not mh or mh.Health <= 0 or not mr then continue end
 
-            -- Gửi 3 packet liên tiếp cho mỗi mob
-            -- Mỗi packet dùng part khác nhau để server không detect trùng
-            local parts = {
-                mr,
-                mob:FindFirstChild("Head"),
-                mob:FindFirstChild("UpperTorso") or mob:FindFirstChild("Torso"),
-            }
-            for _, part in ipairs(parts) do
-                if part then
-                    pcall(function()
-                        HitRemote:FireServer(part, {}, nil, hash)
-                    end)
-                    pcall(function()
-                        local args = {[1]=part, [2]={}, [4]=hash}
-                        HitRemote:FireServer(unpack(args))
-                    end)
-                end
-            end
+            local args = { [1] = mr, [2] = {}, [4] = hash }
+            pcall(function() HitRemote:FireServer(unpack(args)) end)
         end
 
-        -- Click
+        -- Bước 3: Click ảo trigger tool
         VIM:SendMouseButtonEvent(0,0,0,true,game,1)
+
+        -- Bước 4: Cancel animation LẦN NỮA ngay sau click
+        -- → kill animation ngay khi nó vừa spawn
+        task.wait(0)
+        cancelAttackAnims()
+
         VIM:SendMouseButtonEvent(0,0,0,false,game,1)
     end
+    print("[FA] OFF")
 end)
 
--- Management loop: target + nofall + hitbox
+-- Loop cancel phụ — liên tục kill animation song song
 task.spawn(function()
     while _G.FastAttack do
-        task.wait(0.1)
-
-        local c = LocalPlayer.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        if not c or not h or h.Health <= 0 then resetAll(); continue end
-
-        local nearest, _ = getMobs(200)
-
-        if nearest then
-            if currentTarget ~= nearest then
-                if currentTarget then restoreHitbox(currentTarget) end
-                currentTarget = nearest
-                tweenToMob(nearest)
-            end
-            expandHitbox(nearest)
-
-            local nh = nearest:FindFirstChildOfClass("Humanoid")
-            if not nh or nh.Health <= 0 then
-                restoreHitbox(nearest)
-                currentTarget = nil
-                if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-            end
-        else
-            resetAll()
+        task.wait(0)
+        if #getMobs(150) > 0 then
+            cancelAttackAnims()
         end
     end
-    resetAll()
-    print("[FA] OFF")
 end)
 
 print("[FA] ON | hash:", hash)
