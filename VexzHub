@@ -1,6 +1,6 @@
 -- ╔══════════════════════════════════════════════════╗
--- ║  FAST ATTACK — BANANA HUB QUALITY v2           ║
--- ║  Tốc độ: ~3000 hits/s | Fix Lag + Bypass       ║
+-- ║  FAST ATTACK — ULTIMATE EDITION                ║
+-- ║  Tốc độ: 5000+ hits/s | Bypass Server Delay    ║
 -- ╚══════════════════════════════════════════════════╝
 _G.FastAttack = true
 
@@ -37,90 +37,100 @@ if HitRemote then
 end
 
 -- =====================================================
--- BYPASS: Chống giảm sát thương + giữ mob luôn hit được
--- =====================================================
-local function Bypass(mob)
-    pcall(function()
-        -- Mở rộng hitbox mob để luôn đánh trúng
-        for _, part in ipairs(mob:GetDescendants()) do
-            if part:IsA("BasePart") and part.Size.Magnitude < 30 then
-                part.Size = Vector3.new(25, 25, 25)
-                part.CanCollide = false
-                part.Transparency = 1
-            end
-        end
-        
-        -- Xóa Animator để mob không dance → luôn nhận hit
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.WalkSpeed = 0
-            hum.JumpPower = 0
-            for _, anim in ipairs(mob:GetDescendants()) do
-                if anim:IsA("Animator") or anim.Name == "Animate" then
-                    anim:Destroy()
-                end
-            end
-        end
-    end)
-end
-
--- =====================================================
--- PRE-ALLOCATED MEMORY
+-- PRE-ALLOCATED
 -- =====================================================
 local _click1 = { 0, 0, 0, true,  game, 1 }
 local _click2 = { 0, 0, 0, false, game, 1 }
 local _args   = { nil, {}, HASH }
 local _roots  = {}
-local _bypassed = {} -- Cache mob đã bypass
 local _count  = 0
 
 local _sendClick = VIM.SendMouseButtonEvent
 local _fireServer = HitRemote and HitRemote.FireServer
 
 -- =====================================================
--- CANCEL ANIMATION
+-- SMART BYPASS: Reset trạng thái quái để nhận hit
 -- =====================================================
-local function CancelAnims(hum)
-    local tracks = hum:GetPlayingAnimationTracks()
-    for i = 1, #tracks do tracks[i]:Stop(0) end
+local _hitCounters = {}
+
+local function SmartBypass(mob)
+    local id = tostring(mob):match("%x+")
+    if not _hitCounters[id] then
+        _hitCounters[id] = 0
+    end
+    _hitCounters[id] += 1
+    
+    -- Mỗi 200 hits, reset trạng thái mob để tránh bị bỏ qua sát thương
+    if _hitCounters[id] % 200 == 0 then
+        pcall(function()
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                -- Tạm thay đổi WalkSpeed để server re-evaluate mob
+                local oldSpeed = hum.WalkSpeed
+                hum.WalkSpeed = 1
+                task.wait(0.01)
+                hum.WalkSpeed = oldSpeed
+            end
+        end)
+    end
+    
+    -- Cleanup counter nếu quá lớn
+    if _hitCounters[id] > 10000 then
+        _hitCounters[id] = 0
+    end
+end
+
+-- Cleanup cache khi mob chết
+local function CleanupCounters()
+    for id, _ in pairs(_hitCounters) do
+        local found = false
+        for i = 1, _count do
+            local mr = _roots[i]
+            if mr and mr.Parent then
+                local mid = tostring(mr.Parent):match("%x+")
+                if mid == id then found = true; break end
+            end
+        end
+        if not found then _hitCounters[id] = nil end
+    end
 end
 
 -- =====================================================
--- SCAN + BYPASS MOBS
+-- CANCEL ANIMS
 -- =====================================================
-local function ScanAndBypass(root, enemies)
+local function CancelAnims(hum)
+    for _, t in ipairs(hum:GetPlayingAnimationTracks()) do t:Stop(0) end
+end
+
+-- =====================================================
+-- SCAN MOBS
+-- =====================================================
+local function ScanMobs(root)
     _count = 0
+    local E = workspace:FindFirstChild("Enemies")
+    if not E then return end
     local rx, ry, rz = root.Position.X, root.Position.Y, root.Position.Z
-    for _, e in ipairs(enemies:GetChildren()) do
+    for _, e in ipairs(E:GetChildren()) do
         if e:IsA("Model") then
             local h = e:FindFirstChildOfClass("Humanoid")
             if h and h.Health > 0 then
                 local er = e:FindFirstChild("HumanoidRootPart")
                 if er then
-                    local dx, dy, dz = rx - er.Position.X, ry - er.Position.Y, rz - er.Position.Z
+                    local dx = rx - er.Position.X
+                    local dy = ry - er.Position.Y
+                    local dz = rz - er.Position.Z
                     if dx*dx + dy*dy + dz*dz <= 40000 then
                         _count += 1
                         _roots[_count] = er
-                        -- Bypass mob mới (chỉ làm 1 lần)
-                        if not _bypassed[e] then
-                            _bypassed[e] = true
-                            Bypass(e)
-                        end
                     end
                 end
             end
         end
     end
-    -- Cleanup mob đã chết khỏi cache bypass
-    for mob, _ in pairs(_bypassed) do
-        if not mob.Parent or (mob:FindFirstChildOfClass("Humanoid") and mob.Humanoid.Health <= 0) then
-            _bypassed[mob] = nil
-        end
-    end
 end
 
 -- =====================================================
--- MAIN LOOP
+-- MAIN LOOP — 5000+ HITS/S
 -- =====================================================
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack or not _fireServer then return end
@@ -134,33 +144,30 @@ RunService.RenderStepped:Connect(function()
 
     CancelAnims(hum)
 
-    -- Click ×10
-    for _ = 1, 10 do
+    -- Click ×15
+    for _ = 1, 15 do
         _sendClick(VIM, table.unpack(_click1))
         _sendClick(VIM, table.unpack(_click2))
     end
 
-    -- Scan + Bypass
-    local enemies = workspace:FindFirstChild("Enemies")
-    if enemies then
-        ScanAndBypass(root, enemies)
-    end
+    ScanMobs(root)
+    CleanupCounters()
 
-    -- Hit ×50 mỗi mob
     if _count > 0 then
         _args[4] = HASH
-        pcall(function()
-            for m = 1, _count do
-                local mr = _roots[m]
-                if mr and mr.Parent then
-                    _args[1] = mr
-                    for _ = 1, 50 do
-                        _fireServer(HitRemote, table.unpack(_args))
-                    end
+        for m = 1, _count do
+            local mr = _roots[m]
+            if mr and mr.Parent then
+                _args[1] = mr
+                local mob = mr.Parent
+                SmartBypass(mob)
+                -- Hit ×85 mỗi mob/frame
+                for _ = 1, 85 do
+                    _fireServer(HitRemote, table.unpack(_args))
                 end
             end
-        end)
+        end
     end
 end)
 
-print("[Vexz FastAttack v2] ON | Bypass + Fix Lag | Hash:", HASH) 
+print("[Vexz FastAttack ULTIMATE] ON | 5000+ hits/s | Smart Bypass") 
