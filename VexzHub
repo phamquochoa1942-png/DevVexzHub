@@ -143,7 +143,7 @@ end
 -- =====================================================
 -- QUEST DATA FUNCTION
 -- =====================================================
-function CheckQuest()
+QuestCheck = function()
 	local I = game.Players.LocalPlayer.Data.Level.Value
 	if World1 then
 		if I == 1 or I <= 9 then
@@ -289,6 +289,9 @@ function CheckQuest()
 			NameMon = "Fishman Warrior"
 			PosQ = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734)
 			PosM = CFrame.new(60878.30078125, 18.482830047607, 1543.7574462891)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(61163.8515625, 11.6796875, 1819.7841796875))
+			end
 		elseif I == 400 or I <= 449 then
 			Mon = "Fishman Commando"
 			Qdata = 2
@@ -296,6 +299,9 @@ function CheckQuest()
 			NameMon = "Fishman Commando"
 			PosQ = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734)
 			PosM = CFrame.new(61922.6328125, 18.482830047607, 1493.9343261719)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(61163.8515625, 11.6796875, 1819.7841796875))
+			end
 		elseif I == 450 or I <= 474 then
 			Mon = "God's Guard"
 			Qdata = 1
@@ -303,6 +309,9 @@ function CheckQuest()
 			NameMon = "God's Guard"
 			PosQ = CFrame.new(-4721.88867, 843.874695, -1949.96643, .996191859, 0, -0.0871884301, 0, 1, 0, .0871884301, 0, .996191859)
 			PosM = CFrame.new(-4710.04296875, 845.27697753906, -1927.3079833984)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(-4607.82275, 872.54248, -1667.55688))
+			end
 		elseif I == 475 or I <= 524 then
 			Mon = "Shanda"
 			Qdata = 2
@@ -310,6 +319,9 @@ function CheckQuest()
 			NameMon = "Shanda"
 			PosQ = CFrame.new(-7859.09814, 5544.19043, -381.476196, -0.422592998, 0, .906319618, 0, 1, 0, -0.906319618, 0, -0.422592998)
 			PosM = CFrame.new(-7678.4897460938, 5566.4038085938, -497.21560668945)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(-7894.6176757813, 5547.1416015625, -380.29119873047))
+			end
 		elseif I == 525 or I <= 549 then
 			Mon = "Royal Squad"
 			Qdata = 1
@@ -445,6 +457,9 @@ function CheckQuest()
 			NameMon = "Ship Deckhand"
 			PosQ = CFrame.new(1037.80127, 125.092171, 32911.6016)
 			PosM = CFrame.new(1212.0111083984, 150.79205322266, 33059.24609375)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 500 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125))
+			end
 		elseif I == 1275 or I <= 1299 then
 			Mon = "Ship Engineer"
 			Qdata = 2
@@ -452,6 +467,9 @@ function CheckQuest()
 			NameMon = "Ship Engineer"
 			PosQ = CFrame.new(1037.80127, 125.092171, 32911.6016)
 			PosM = CFrame.new(919.47863769531, 43.544013977051, 32779.96875)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 500 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125))
+			end
 		elseif I == 1300 or I <= 1324 then
 			Mon = "Ship Steward"
 			Qdata = 1
@@ -459,6 +477,9 @@ function CheckQuest()
 			NameMon = "Ship Steward"
 			PosQ = CFrame.new(968.80957, 125.092171, 33244.125)
 			PosM = CFrame.new(919.43853759766, 129.55599975586, 33436.03515625)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 500 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125))
+			end
 		elseif I == 1325 or I <= 1349 then
 			Mon = "Ship Officer"
 			Qdata = 2
@@ -466,6 +487,9 @@ function CheckQuest()
 			NameMon = "Ship Officer"
 			PosQ = CFrame.new(968.80957, 125.092171, 33244.125)
 			PosM = CFrame.new(1036.0179443359, 181.4390411377, 33315.7265625)
+			if _G.Level and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 500 then
+				replicated.Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125))
+			end
 		elseif I == 1350 or I <= 1374 then
     Mon = "Arctic Warrior"
     Qdata = 1
@@ -759,6 +783,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(-16709.49,419.68,1751.09)
 		elseif I >= 2600 and I <= 2624 then
 			PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "Reef Bandit"
 			Qdata = 1
 			Qname = "SubmergedQuest1"
@@ -766,6 +798,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(11019.1318, -2146.06812, 9342.3916, -0.719955266, -1.74275385e-08, 0.69402045, 5.76556367e-08, 1, 8.49211546e-08, -0.69402045, 1.01153624e-07, -0.719955266)
 		elseif I >= 2625 and I <= 2649 then
 			PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "Coral Pirate"
 			Qdata = 2
 			Qname = "SubmergedQuest1"
@@ -773,6 +813,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(10808.6006, -2030.36145, 9364.2334, -0.775185347, -0.0359364748, 0.6307109, 0.0615428537, 0.989336014, 0.132010356, -0.628728986, 0.141148239, -0.764707148)
 		elseif I >= 2650 and I <= 2674 then
 			PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "Sea Chanter"
 			Qdata = 1
 			Qname = "SubmergedQuest2"
@@ -780,6 +828,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(10671.2715, -2057.59155, 10047.2588, -0.846484065, -3.11045447e-08, 0.532414079, -5.55383117e-08, 1, -2.98785316e-08, -0.532414079, -5.48610757e-08, -0.846484065)
 		elseif I >= 2675 and I <= 2699 then
 			PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "Ocean Prophet"
 			Qdata = 2
 			Qname = "SubmergedQuest2"
@@ -787,6 +843,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(11008.5195, -2007.72839, 10223.0791, -0.688615739, 2.33523378e-09, -0.725126445, 2.99292546e-09, 1, 3.78221315e-10, 0.725126445, -1.90980032e-09, -0.688615739)
 		elseif I >= 2700 and I <= 2724 then
 			PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "High Disciple"
 			Qdata = 1
 			Qname = "SubmergedQuest3"
@@ -794,6 +858,14 @@ elseif I == 1650 or I <= 1699 then
 			PosM = CFrame.new(9750.41602, -1966.93884, 9753.36035, -0.749824047, 5.57797613e-08, -0.661637306, 2.03500754e-08, 1, 6.1243199e-08, 0.661637306, 3.24572511e-08, -0.749824047)
 		elseif I >= 2725 then
 			PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
+			if (getgenv().AutoFarm or _G.Level) and (PosQ.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 10000 then
+				_tp(CFrame.new(-16269.7041, 25.2288494, 1373.65955, 0.997390985, 1.47309942e-09, -0.0721890926, -4.00651912e-09, 0.99999994, -2.51183763e-09, 0.0721890852, 5.75363091e-10, 0.997390926))
+				task.wait(2)
+				local args = {"TravelToSubmergedIsland"}
+				game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer(unpack(args))
+				return
+			end
+			-- Código para executar SOMENTE se já estiver na ilha
 			Mon = "Grand Devotee"
 			Qdata = 2
 			Qname = "SubmergedQuest3"
@@ -802,19 +874,65 @@ elseif I == 1650 or I <= 1699 then
 		end
 	end
 end
-
--- =====================================================
--- CHUYỂN ĐỔI BIẾN TỪ QUESTCHECK SANG FORMAT CHUẨN
--- =====================================================
-local function ConvertQuestData()
-    CheckQuest()
-    -- Chuyển từ PosQ, PosM, Qname, Qdata sang CFrameQuest, CFrameMon, NameQuest, LevelQuest
-    CFrameQuest = PosQ
-    CFrameMon = PosM
-    NameQuest = Qname
-    LevelQuest = Qdata
-    -- Mon, NameMon đã được gán trực tiếp trong CheckQuest
+QuestNeta = function()
+		local I = QuestCheck();
+		return {
+			[1] = Mon,
+			[2] = Qdata,
+			[3] = Qname,
+			[4] = PosM,
+			[5] = NameMon,
+			[6] = PosQ,
+		};
+	end;
+-- LOGIC AUTO LEVEL:
+local CurrentMob = nil
+local function GetNearestMob(TargetName)
+    local plr = game.Players.LocalPlayer
+    local Root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if not Root then return nil end
+    local Closest, Dist = nil, math.huge    
+    for _, Mob in pairs(workspace.Enemies:GetChildren()) do    
+        if G.Alive(Mob) and Mob.Name == TargetName and Mob:FindFirstChild("HumanoidRootPart") then    
+            local d = (Mob.HumanoidRootPart.Position - Root.Position).Magnitude    
+            if d < Dist then Dist = d Closest = Mob end    
+        end    
+    end  
+    return Closest
 end
+
+spawn(function()
+    while task.wait() do
+        if _G.Level and _G.StartFarm then
+            pcall(function()
+                local plr = game.Players.LocalPlayer  
+                local Root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")  
+                if not Root then return end  
+                local QuestTitle = plr.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text      
+                local Q = QuestNeta()  
+                if not string.find(QuestTitle, Q[5]) then game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest") end      
+                if not plr.PlayerGui.Main.Quest.Visible then      
+                    TeleportConditional(Root, Q[6], TELEPORT_DISTANCE_THRESHOLD)      
+                    if (Root.Position - Q[6].Position).Magnitude <= 50 then      
+                        task.wait(1.9)  
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", Q[3], Q[2])      
+                    end      
+                    return      
+                end      
+                local Nearest = GetNearestMob(Q[1])  
+                if CurrentMob and G.Alive(CurrentMob) and CurrentMob.Parent then      
+                    G.Kill(CurrentMob, true)      
+                    return      
+                else CurrentMob = nil end      
+                if not Nearest then TeleportConditional(Root, Q[4], TELEPORT_DISTANCE_THRESHOLD) return end
+                CurrentMob = Nearest
+                if CurrentMob and CurrentMob:FindFirstChild("HumanoidRootPart") then _tp(CurrentMob.HumanoidRootPart.CFrame) end
+                repeat task.wait() G.Kill(CurrentMob, true) until not _G.StartFarm or not _G.Level or not CurrentMob.Parent or CurrentMob.Humanoid.Health <= 0      
+                CurrentMob = nil      
+            end)  
+        end  
+    end
+end)
 
 -- =====================================================
 -- GLOBAL STATE
@@ -914,38 +1032,10 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- HÀM DI CHUYỂN (Tween)
+-- AUTO QUEST + FARM
 -- =====================================================
-local function topos(pos)
-    pcall(function()
-        local char = LP.Character
-        if not char then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        
-        local dist = (pos.Position - root.Position).Magnitude
-        if dist <= 5 then
-            root.CFrame = pos
-            return
-        end
-        
-        if getgenv().currentTween then
-            getgenv().currentTween:Cancel()
-            getgenv().currentTween = nil
-        end
-        
-        local tweenInfo = TweenInfo.new(dist / 350, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(root, tweenInfo, {CFrame = pos})
-        getgenv().currentTween = tween
-        tween:Play()
-        tween.Completed:Wait()
-        getgenv().currentTween = nil
-    end)
-end
+local CurrentMob = nil
 
--- =====================================================
--- TÌM QUÁI GẦN NHẤT
--- =====================================================
 local function GetNearestMob(TargetName)
     local char = LP.Character
     if not char then return nil end
@@ -971,10 +1061,75 @@ local function GetNearestMob(TargetName)
     return Closest
 end
 
--- =====================================================
--- AUTO QUEST + FARM
--- =====================================================
-local CurrentMob = nil
+local activeTween = nil
+
+local function topos(pos)
+    pcall(function()
+        local char = LP.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+
+        -- Tắt gravity + khóa nhân vật để không bị rơi khi Tween
+        workspace.Gravity = 0
+        if hum then
+            hum.WalkSpeed = 0
+            hum.JumpPower = 0
+            hum.PlatformStand = true
+        end
+
+        -- Cancel tween cũ nếu đang chạy
+        if activeTween then
+            activeTween:Cancel()
+            activeTween = nil
+        end
+
+        local dist = (pos.Position - root.Position).Magnitude
+        if dist > 5 then
+            local speed = 350
+            local dur = math.clamp(dist / speed, 0.05, 3)
+            local tween = TweenService:Create(
+                root,
+                TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                { CFrame = pos }
+            )
+            activeTween = tween
+            tween:Play()
+
+            -- Giữ velocity = 0 trong lúc tween để không bị drift
+            local conn
+            conn = RunService.Heartbeat:Connect(function()
+                if root and root.Parent then
+                    root.Velocity = Vector3.zero
+                    root.AssemblyLinearVelocity = Vector3.zero
+                else
+                    conn:Disconnect()
+                end
+            end)
+
+            tween.Completed:Connect(function()
+                conn:Disconnect()
+                activeTween = nil
+                -- Khôi phục gravity sau khi đến nơi
+                workspace.Gravity = 196.2
+                if hum then
+                    hum.WalkSpeed = 16
+                    hum.JumpPower = 50
+                    hum.PlatformStand = false
+                end
+            end)
+        else
+            root.CFrame = pos
+            workspace.Gravity = 196.2
+            if hum then
+                hum.WalkSpeed = 16
+                hum.JumpPower = 50
+                hum.PlatformStand = false
+            end
+        end
+    end)
+end
 
 task.spawn(function()
     while task.wait() do
@@ -985,21 +1140,54 @@ task.spawn(function()
                 local root = char:FindFirstChild("HumanoidRootPart")
                 if not root then return end
                 
-                ConvertQuestData()
+                CheckQuest()
                 
                 if not Mon then return end
                 
                 local QuestTitle = LP.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text
                 
-                if not string.find(QuestTitle, NameMon) then
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
+                -- FIX: đọc quest GUI an toàn, tránh crash nil
+                local questVisible = false
+                local questTitle = ""
+                pcall(function()
+                    local questGui = LP.PlayerGui:FindFirstChild("Main")
+                    if questGui then
+                        local questFrame = questGui:FindFirstChild("Quest")
+                        if questFrame then
+                            questVisible = questFrame.Visible
+                            local container = questFrame:FindFirstChild("Container")
+                            if container then
+                                local titleFrame = container:FindFirstChild("QuestTitle")
+                                if titleFrame then
+                                    local titleLabel = titleFrame:FindFirstChild("Title")
+                                    if titleLabel then
+                                        questTitle = titleLabel.Text or ""
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+
+                -- Nếu có quest đang chạy nhưng sai mob → abandon
+                if questVisible and questTitle ~= "" and NameMon and not string.find(questTitle, NameMon) then
+                    pcall(function()
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
+                    end)
                 end
-                
-                if not LP.PlayerGui.Main.Quest.Visible then
+
+                -- Nếu chưa có quest → bay đến NPC nhận quest
+                if not questVisible then
                     topos(CFrameQuest)
-                    if (root.Position - CFrameQuest.Position).Magnitude <= 20 then
-                        task.wait(2)
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", NameQuest, LevelQuest)
+                    task.wait(0.5)
+                    -- Kiểm tra đã đến gần NPC chưa
+                    local distToQuest = (root.Position - CFrameQuest.Position).Magnitude
+                    if distToQuest <= 25 then
+                        task.wait(1)
+                        pcall(function()
+                            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", NameQuest, LevelQuest)
+                        end)
+                        task.wait(0.5)
                     end
                     return
                 end
