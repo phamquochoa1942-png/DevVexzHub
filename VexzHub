@@ -1,4 +1,4 @@
--- Fast Attack — MAX SPEED v2 — by Quoc Hoa
+-- Fast Attack — MAX SPEED v3 — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -70,21 +70,16 @@ local mobUpdateFrame = 0
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
 
-    -- Cancel TRƯỚC khi click
     cancelAll()
 
-    -- Click ảo ×3
-    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    -- Click ×5
+    for _ = 1, 5 do
+        VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    end
 
-    -- Cancel SAU khi click
     cancelAll()
 
-    -- Cập nhật mob
     mobUpdateFrame += 1
     if mobUpdateFrame >= 2 then
         mobUpdateFrame = 0
@@ -105,22 +100,24 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- FireServer ×2 mỗi mob
+    -- FireServer ×3 mỗi mob
     for _, mr in ipairs(cachedMobs) do
         pcall(function()
+            HitRemote:FireServer(mr, {}, hash)
             HitRemote:FireServer(mr, {}, hash)
             HitRemote:FireServer(mr, {}, hash)
         end)
     end
 end)
 
--- Loop phụ cancel liên tục
+-- Loop phụ cancel ×2
 task.spawn(function()
     while _G.FastAttack do
+        cancelAll()
         task.wait(0.001)
         cancelAll()
+        task.wait(0.001)
     end
 end)
 
-print("[FastAttack MAX] ON | Hash:", hash)
-print("[FastAttack MAX] OFF: _G.FastAttack = false") 
+print("[FastAttack MAX v3] ON | Hash:", hash) 
