@@ -1,156 +1,114 @@
--- Fast Attack — OPTIMIZED NO LAG — by Quoc Hoa
--- Tốc độ giữ nguyên: 3000 clicks + 3000 hits/giây
--- Fix lag: Object Pooling + Batch Processing + Memory Pre-allocation
-
+-- Fast Attack — PREMIUM HUB QUALITY — by Quoc Hoa
+-- Tốc độ: ~3000 hits/giây, Click ~600/giây
+-- Không lag nhờ: Object Pool + Pre-allocated Memory + Single Loop
 _G.FastAttack = true
 
-local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService        = game:GetService("RunService")
-local VIM               = game:GetService("VirtualInputManager")
-local LocalPlayer       = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local VIM = game:GetService("VirtualInputManager")
+local LocalPlayer = game.Players.LocalPlayer
 
--- Pre-allocate constants
-local ZERO_VECTOR = Vector3.new(0, 0, 0)
-local CLICK_TRUE  = { 0, 0, 0, true,  game, 1 }
-local CLICK_FALSE = { 0, 0, 0, false, game, 1 }
+-- Pre-allocate TẤT CẢ biến dùng lại
+local CLICK_BATCH = 10
+local HIT_BATCH = 50
+local SCAN_RANGE = 200
 
-local HitRemote = ReplicatedStorage:FindFirstChild("Modules")
-    and ReplicatedStorage.Modules:FindFirstChild("Net")
-    and ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
+local poolArgs = { nil, {}, "079baa9c" }
+local mobRoots = {}
+local mobCount = 0
+
+-- Lấy Remote 1 lần, cache lại
+local Modules = ReplicatedStorage:FindFirstChild("Modules")
+local Net = Modules and Modules:FindFirstChild("Net")
+local HitRemote = Net and Net:FindFirstChild("RE/RegisterHit")
 
 local hash = "079baa9c"
 
--- Hook hash
-pcall(function()
-    if not HitRemote then return end
-    local mt = getrawmetatable(game)
-    local old = mt.__namecall
-    setreadonly(mt, false)
-    mt.__namecall = newcclosure(function(self, ...)
-        if getnamecallmethod() == "FireServer" and self == HitRemote then
-            local a = {...}
-            if type(a[4]) == "string" and #a[4] >= 6 then hash = a[4] end
-        end
-        return old(self, ...)
+-- Hook hash nhẹ
+if HitRemote then
+    pcall(function()
+        local mt = getrawmetatable(game)
+        local old = mt.__namecall
+        setreadonly(mt, false)
+        mt.__namecall = newcclosure(function(self, ...)
+            if self == HitRemote then
+                local a = {...}
+                if type(a[4]) == "string" and #a[4] >= 6 then hash = a[4] end
+            end
+            return old(self, ...)
+        end)
+        setreadonly(mt, true)
     end)
-    setreadonly(mt, true)
-end)
-
--- Pre-cache Humanoid & Root references
-local currentChar = nil
-local currentHum  = nil
-local currentRoot = nil
-
-local function updateCharacter()
-    local c = LocalPlayer.Character
-    if c ~= currentChar then
-        currentChar = c
-        currentHum  = c and c:FindFirstChildOfClass("Humanoid")
-        currentRoot = c and c:FindFirstChild("HumanoidRootPart")
-    end
-    return currentRoot
 end
 
--- Cancel animation — optimized path
-local EMPTY_TABLE = {}
-local function cancelAll()
-    if not currentHum then return end
-    local tracks = currentHum:GetPlayingAnimationTracks()
-    local len = #tracks
-    if len == 0 then return end
-    for i = 1, len do
-        tracks[i]:Stop(0)
-    end
-end
-
--- Object pool cho mob list — tránh tạo table mới mỗi frame
-local mobPool = {}
-local mobCount = 0
-
-local function clearMobPool()
-    for i = 1, mobCount do
-        mobPool[i] = nil
-    end
+-- Pre-cache workspace children lookup
+local function fastScan(root)
     mobCount = 0
-end
-
-local function addMob(er)
-    mobCount = mobCount + 1
-    mobPool[mobCount] = er
-end
-
-local function getMobs()
-    clearMobPool()
-    if not currentRoot then return end
     local E = workspace:FindFirstChild("Enemies")
     if not E then return end
-    local children = E:GetChildren()
-    for i = 1, #children do
-        local e = children[i]
+    local rx, ry, rz = root.Position.X, root.Position.Y, root.Position.Z
+    for _, e in ipairs(E:GetChildren()) do
         if e:IsA("Model") then
-            local h  = e:FindFirstChildOfClass("Humanoid")
-            local er = e:FindFirstChild("HumanoidRootPart")
-            if h and h.Health > 0 and er then
-                local dx = currentRoot.Position.X - er.Position.X
-                local dz = currentRoot.Position.Z - er.Position.Z
-                -- So sánh nhanh không dùng .Magnitude (tránh sqrt)
-                if dx*dx + dz*dz <= 40000 then -- 200^2
-                    addMob(er)
+            local h = e:FindFirstChildOfClass("Humanoid")
+            if h and h.Health > 0 then
+                local er = e:FindFirstChild("HumanoidRootPart")
+                if er then
+                    local dx = rx - er.Position.X
+                    local dy = ry - er.Position.Y
+                    local dz = rz - er.Position.Z
+                    -- Fast distance check (no sqrt for filtering)
+                    if dx*dx + dy*dy + dz*dz <= SCAN_RANGE * SCAN_RANGE then
+                        mobCount += 1
+                        mobRoots[mobCount] = er
+                    end
                 end
             end
         end
     end
 end
 
--- Batch click — giảm overhead gọi hàm
-local clickBatch = 0
-local function processClicks()
-    for _ = 1, 50 do
-        VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    end
-end
+-- Pre-load click function into local
+local sendClick = VIM.SendMouseButtonEvent
+local clickArgs1 = { 0, 0, 0, true, game, 1 }
+local clickArgs2 = { 0, 0, 0, false, game, 1 }
 
--- Batch hit — 1 pcall cho tất cả mob
-local function processHits()
-    if mobCount == 0 then return end
-    local args = { nil, {}, hash }
-    pcall(function()
-        for m = 1, mobCount do
-            local mr = mobPool[m]
-            if mr and mr.Parent then
-                args[1] = mr
-                for _ = 1, 50 do
-                    HitRemote:FireServer(unpack(args))
-                end
-            end
-        end
-    end)
-end
+-- Pre-load FireServer
+local fireServer = HitRemote and HitRemote.FireServer
 
--- Main loop — nhẹ nhất có thể
+-- Main Loop — optimized to death
 RunService.RenderStepped:Connect(function()
-    if not _G.FastAttack then return end
-
-    updateCharacter()
-    if not currentRoot then return end
-
-    cancelAll()
-    processClicks()
-    cancelAll()
-    getMobs()
-    processHits()
-end)
-
--- Loop phụ cancel — dùng Heartbeat nhẹ hơn
-task.spawn(function()
-    while _G.FastAttack do
-        if currentHum then
-            cancelAll()
-        end
-        RunService.Heartbeat:Wait()
+    if not _G.FastAttack or not fireServer then return end
+    
+    local c = LocalPlayer.Character
+    if not c then return end
+    
+    local root = c:FindFirstChild("HumanoidRootPart")
+    local hum = c:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then return end
+    
+    -- Cancel anim
+    local tracks = hum:GetPlayingAnimationTracks()
+    local tCount = #tracks
+    for i = 1, tCount do tracks[i]:Stop(0) end
+    
+    -- Batch click
+    for _ = 1, CLICK_BATCH do
+        sendClick(VIM, unpack(clickArgs1))
+        sendClick(VIM, unpack(clickArgs2))
     end
-end)
-
-print("[FastAttack NO LAG] ON | 3000 clicks/s + 3000 hits/s") 
+    
+    -- Scan + Hit
+    fastScan(root)
+    if mobCount > 0 then
+        poolArgs[4] = hash
+        for m = 1, mobCount do
+            local mr = mobRoots[m]
+            if mr and mr.Parent then
+                poolArgs[1] = mr
+                for _ = 1, HIT_BATCH do
+                    fireServer(HitRemote, unpack(poolArgs))
+                end
+            end
+        end
+    end
+end) 
