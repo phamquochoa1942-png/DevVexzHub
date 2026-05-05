@@ -6,8 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
---// Player
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
 
 --// Remote
 local HitRemote = ReplicatedStorage:WaitForChild("Modules")
@@ -18,23 +17,64 @@ local HitRemote = ReplicatedStorage:WaitForChild("Modules")
 local Enemies = workspace:WaitForChild("Enemies")
 
 --// Config
-local BURST = 3
-local DIST = 150
-local ATTACK_ID = "079996f9"
+local DEFAULT_ID = "079996f9" -- 🔥 id cũ (fallback)
+local currentID = DEFAULT_ID
 
---// Hitbox ảo (không làm quái to)
-local function getBestPart(mob)
-    return mob:FindFirstChild("Head")
-        or mob:FindFirstChild("HumanoidRootPart")
+local BURST = 2
+local CLICK_DELAY = 0.05
+local DIST = 120
+
+--------------------------------------------------
+-- 🔥 AUTO GET ATTACK ID
+--------------------------------------------------
+local old
+old = hookmetamethod(game, "__namecall", function(self, ...)
+    local args = {...}
+
+    if self == HitRemote and getnamecallmethod() == "FireServer" then
+        if args[4] then
+            currentID = args[4]
+        end
+    end
+
+    return old(self, ...)
+end)
+
+--------------------------------------------------
+-- 🧠 Animation Cancel
+--------------------------------------------------
+local function cancelSwing(humanoid)
+    for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+        local name = track.Animation and track.Animation.Name or ""
+
+        if name:lower():find("attack")
+        or name:lower():find("swing")
+        or name:lower():find("slash") then
+            
+            track:Stop(0)
+        end
+    end
 end
 
---// Click ảo
+--------------------------------------------------
+-- 🖱️ Click
+--------------------------------------------------
 local function click()
     VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
     VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
 end
 
---// START
+--------------------------------------------------
+-- 🎯 Target
+--------------------------------------------------
+local function getBestPart(mob)
+    return mob:FindFirstChild("Head")
+        or mob:FindFirstChild("HumanoidRootPart")
+end
+
+--------------------------------------------------
+-- 🚀 START
+--------------------------------------------------
 function startFastAttack()
     if _G.FastAttack then return end
     _G.FastAttack = true
@@ -42,15 +82,24 @@ function startFastAttack()
     task.spawn(function()
         while _G.FastAttack do
             
-            local char = LocalPlayer.Character
+            local char = player.Character
             if not char then task.wait(0.1) continue end
 
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
             local root = char:FindFirstChild("HumanoidRootPart")
-            if not root then task.wait(0.1) continue end
 
-            -- click trước
+            if not humanoid or not root then
+                task.wait(0.1)
+                continue
+            end
+
+            -- 🔥 cancel animation
+            cancelSwing(humanoid)
+
+            -- 🔥 click
             click()
 
+            -- 🔥 attack
             for _, mob in ipairs(Enemies:GetChildren()) do
                 if not _G.FastAttack then break end
 
@@ -63,11 +112,10 @@ function startFastAttack()
                     if dist <= DIST then
                         local args = {
                             [1] = part,
-                            [2] = {}, -- giữ nguyên theo bạn
-                            [4] = ATTACK_ID
+                            [2] = {}, -- giữ nguyên system bạn
+                            [4] = currentID -- 🔥 dùng ID auto
                         }
 
-                        -- 🔥 FAST ATTACK
                         for i = 1, BURST do
                             HitRemote:FireServer(unpack(args))
                         end
@@ -75,12 +123,14 @@ function startFastAttack()
                 end
             end
 
-            task.wait(0.08) -- 🔥 nhịp chuẩn (đừng để 0)
+            task.wait(CLICK_DELAY)
         end
     end)
 end
 
---// STOP
+--------------------------------------------------
+-- 🛑 STOP
+--------------------------------------------------
 function stopFastAttack()
     _G.FastAttack = false
 end
