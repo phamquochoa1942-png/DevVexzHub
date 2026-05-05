@@ -1,4 +1,4 @@
--- Fast Attack + Animation Cancel — TỐC ĐỘ TỐI ĐA — by Quoc Hoa
+-- Fast Attack + Animation Cancel — Frame Perfect — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -7,11 +7,15 @@ local RunService        = game:GetService("RunService")
 local VIM               = game:GetService("VirtualInputManager")
 local LocalPlayer       = Players.LocalPlayer
 
-local HitRemote = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
+-- Remote hit (Blox Fruits)
+local HitRemote = ReplicatedStorage:FindFirstChild("Modules")
+    and ReplicatedStorage.Modules:FindFirstChild("Net")
+    and ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
 -- Hook hash tự động
 local hash = "079baa9c"
 pcall(function()
+    if not HitRemote then return end
     local mt = getrawmetatable(game)
     local old = mt.__namecall
     setreadonly(mt, false)
@@ -27,89 +31,99 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
+-- Danh sách keywords animation cần cancel
 local ATTACK_KEYWORDS = {
     "attack", "slash", "punch", "kick", "hit",
     "swing", "strike", "combo", "skill", "cast",
-    "shoot", "throw", "smash", "dash", "ability"
+    "shoot", "throw", "smash", "dash", "ability",
+    "stab", "cleave", "chop", "jab", "uppercut",
+    "m1", "light", "heavy", "slam", "spin", "m2",
 }
 
+-- Kiểm tra 1 track có phải animation tấn công không
 local function isAttackAnim(track)
-    local id = tostring(track.Animation and track.Animation.AnimationId or ""):lower()
+    local id   = tostring(track.Animation and track.Animation.AnimationId or ""):lower()
     local name = track.Name:lower()
     for _, kw in ipairs(ATTACK_KEYWORDS) do
-        if id:find(kw) or name:find(kw) then return true end
+        if id:find(kw) or name:find(kw) then
+            return true
+        end
     end
     return false
 end
 
+-- Frame-perfect Animation Cancel
 local function cancelAttackAnims()
-    local c = LocalPlayer.Character
-    if not c then return end
-    local hum = c:FindFirstChildOfClass("Humanoid")
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
         if isAttackAnim(track) then
-            track:Stop(0)
+            track:Stop(0)  -- Stop ngay lập tức, không fade
         end
     end
 end
 
--- Pre-cache tất cả mob trong 150 studs
-local cachedMobs = {}
+-- Helper: lấy HumanoidRootPart của nhân vật
+local function getRoot()
+    local c = LocalPlayer.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
 
-local function updateMobs()
-    local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not r then cachedMobs = {} return end
+-- Lấy danh sách mob trong tầm
+local function getNearbyMobs(maxDist)
+    local r = getRoot()
+    if not r then return {} end
     local E = workspace:FindFirstChild("Enemies")
-    if not E then cachedMobs = {} return end
+    if not E then return {} end
     local list = {}
     for _, e in ipairs(E:GetChildren()) do
         if not e:IsA("Model") then continue end
         local h  = e:FindFirstChildOfClass("Humanoid")
         local er = e:FindFirstChild("HumanoidRootPart")
         if not h or h.Health <= 0 or not er then continue end
-        if (r.Position - er.Position).Magnitude <= 150 then
+        if (r.Position - er.Position).Magnitude <= (maxDist or 150) then
             table.insert(list, er)
         end
     end
-    cachedMobs = list
+    return list
 end
 
--- ═══════════════════════════════════════════════
--- LOOP CHÍNH — RenderStepped = 60 lần/giây
--- Chỉ làm 2 việc: Cancel anim + Click ảo
--- ═══════════════════════════════════════════════
+-- ============================================
+-- LOOP CHÍNH — RenderStepped = 60 Hz
+-- Mỗi frame:
+--   1. Cancel animation
+--   2. Click ảo
+-- ============================================
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
-
     cancelAttackAnims()
-
-    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
     VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 end)
 
--- ═══════════════════════════════════════════════
--- LOOP RIÊNG: FireServer mỗi 5 frame
--- Không block loop chính
--- ═══════════════════════════════════════════════
+-- ============================================
+-- LOOP GỬI REMOTE — mỗi 3 frame (20 lần/giây)
+-- ============================================
 local hitFrame = 0
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
     hitFrame += 1
-    if hitFrame < 3 then return end  -- Mỗi 3 frame gửi 1 lần
+    if hitFrame < 3 then return end
     hitFrame = 0
 
-    updateMobs()
-    for _, mr in ipairs(cachedMobs) do
+    local mobs = getNearbyMobs(150)
+    for _, mr in ipairs(mobs) do
         pcall(function()
             HitRemote:FireServer(mr, {}, hash)
         end)
     end
 end)
 
--- ═══════════════════════════════════════════════
--- LOOP PHỤ: Cancel animation liên tục song song
--- ═══════════════════════════════════════════════
+-- ============================================
+-- LOOP PHỤ — Cancel animation siêu nhanh
+-- ============================================
 task.spawn(function()
     while _G.FastAttack do
         task.wait(0)
@@ -117,5 +131,5 @@ task.spawn(function()
     end
 end)
 
-print("[FA] ON | hash:", hash)
-print("[FA] OFF: _G.FastAttack = false") 
+print("[FastAttack] ON | Hash:", hash)
+print("[FastAttack] OFF: _G.FastAttack = false") 
