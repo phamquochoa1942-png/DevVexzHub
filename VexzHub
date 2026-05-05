@@ -83,4 +83,3 @@ end)
 
 print("[FastAttack] ON | hash:", hash)
 print("[FastAttack] OFF: _G.FastAttack = false")
- 
