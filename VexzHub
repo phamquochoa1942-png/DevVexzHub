@@ -1,30 +1,23 @@
--- Fast Attack — PREMIUM HUB QUALITY — by Quoc Hoa
--- Tốc độ: ~3000 hits/giây, Click ~600/giây
--- Không lag nhờ: Object Pool + Pre-allocated Memory + Single Loop
+-- ╔══════════════════════════════════════════════════╗
+-- ║  FAST ATTACK — BANANA HUB QUALITY v2           ║
+-- ║  Tốc độ: ~3000 hits/s | Fix Lag + Bypass       ║
+-- ╚══════════════════════════════════════════════════╝
 _G.FastAttack = true
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local VIM = game:GetService("VirtualInputManager")
-local LocalPlayer = game.Players.LocalPlayer
+local LP = game.Players.LocalPlayer
 
--- Pre-allocate TẤT CẢ biến dùng lại
-local CLICK_BATCH = 10
-local HIT_BATCH = 50
-local SCAN_RANGE = 200
+-- =====================================================
+-- REMOTE + HASH
+-- =====================================================
+local HitRemote = ReplicatedStorage:FindFirstChild("Modules")
+    and ReplicatedStorage.Modules:FindFirstChild("Net")
+    and ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
-local poolArgs = { nil, {}, "079baa9c" }
-local mobRoots = {}
-local mobCount = 0
+local HASH = "079baa9c"
 
--- Lấy Remote 1 lần, cache lại
-local Modules = ReplicatedStorage:FindFirstChild("Modules")
-local Net = Modules and Modules:FindFirstChild("Net")
-local HitRemote = Net and Net:FindFirstChild("RE/RegisterHit")
-
-local hash = "079baa9c"
-
--- Hook hash nhẹ
 if HitRemote then
     pcall(function()
         local mt = getrawmetatable(game)
@@ -32,8 +25,10 @@ if HitRemote then
         setreadonly(mt, false)
         mt.__namecall = newcclosure(function(self, ...)
             if self == HitRemote then
-                local a = {...}
-                if type(a[4]) == "string" and #a[4] >= 6 then hash = a[4] end
+                local args = {...}
+                if type(args[4]) == "string" and #args[4] >= 6 then
+                    HASH = args[4]
+                end
             end
             return old(self, ...)
         end)
@@ -41,74 +36,131 @@ if HitRemote then
     end)
 end
 
--- Pre-cache workspace children lookup
-local function fastScan(root)
-    mobCount = 0
-    local E = workspace:FindFirstChild("Enemies")
-    if not E then return end
+-- =====================================================
+-- BYPASS: Chống giảm sát thương + giữ mob luôn hit được
+-- =====================================================
+local function Bypass(mob)
+    pcall(function()
+        -- Mở rộng hitbox mob để luôn đánh trúng
+        for _, part in ipairs(mob:GetDescendants()) do
+            if part:IsA("BasePart") and part.Size.Magnitude < 30 then
+                part.Size = Vector3.new(25, 25, 25)
+                part.CanCollide = false
+                part.Transparency = 1
+            end
+        end
+        
+        -- Xóa Animator để mob không dance → luôn nhận hit
+        local hum = mob:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = 0
+            hum.JumpPower = 0
+            for _, anim in ipairs(mob:GetDescendants()) do
+                if anim:IsA("Animator") or anim.Name == "Animate" then
+                    anim:Destroy()
+                end
+            end
+        end
+    end)
+end
+
+-- =====================================================
+-- PRE-ALLOCATED MEMORY
+-- =====================================================
+local _click1 = { 0, 0, 0, true,  game, 1 }
+local _click2 = { 0, 0, 0, false, game, 1 }
+local _args   = { nil, {}, HASH }
+local _roots  = {}
+local _bypassed = {} -- Cache mob đã bypass
+local _count  = 0
+
+local _sendClick = VIM.SendMouseButtonEvent
+local _fireServer = HitRemote and HitRemote.FireServer
+
+-- =====================================================
+-- CANCEL ANIMATION
+-- =====================================================
+local function CancelAnims(hum)
+    local tracks = hum:GetPlayingAnimationTracks()
+    for i = 1, #tracks do tracks[i]:Stop(0) end
+end
+
+-- =====================================================
+-- SCAN + BYPASS MOBS
+-- =====================================================
+local function ScanAndBypass(root, enemies)
+    _count = 0
     local rx, ry, rz = root.Position.X, root.Position.Y, root.Position.Z
-    for _, e in ipairs(E:GetChildren()) do
+    for _, e in ipairs(enemies:GetChildren()) do
         if e:IsA("Model") then
             local h = e:FindFirstChildOfClass("Humanoid")
             if h and h.Health > 0 then
                 local er = e:FindFirstChild("HumanoidRootPart")
                 if er then
-                    local dx = rx - er.Position.X
-                    local dy = ry - er.Position.Y
-                    local dz = rz - er.Position.Z
-                    -- Fast distance check (no sqrt for filtering)
-                    if dx*dx + dy*dy + dz*dz <= SCAN_RANGE * SCAN_RANGE then
-                        mobCount += 1
-                        mobRoots[mobCount] = er
+                    local dx, dy, dz = rx - er.Position.X, ry - er.Position.Y, rz - er.Position.Z
+                    if dx*dx + dy*dy + dz*dz <= 40000 then
+                        _count += 1
+                        _roots[_count] = er
+                        -- Bypass mob mới (chỉ làm 1 lần)
+                        if not _bypassed[e] then
+                            _bypassed[e] = true
+                            Bypass(e)
+                        end
                     end
                 end
             end
         end
     end
-end
-
--- Pre-load click function into local
-local sendClick = VIM.SendMouseButtonEvent
-local clickArgs1 = { 0, 0, 0, true, game, 1 }
-local clickArgs2 = { 0, 0, 0, false, game, 1 }
-
--- Pre-load FireServer
-local fireServer = HitRemote and HitRemote.FireServer
-
--- Main Loop — optimized to death
-RunService.RenderStepped:Connect(function()
-    if not _G.FastAttack or not fireServer then return end
-    
-    local c = LocalPlayer.Character
-    if not c then return end
-    
-    local root = c:FindFirstChild("HumanoidRootPart")
-    local hum = c:FindFirstChildOfClass("Humanoid")
-    if not root or not hum then return end
-    
-    -- Cancel anim
-    local tracks = hum:GetPlayingAnimationTracks()
-    local tCount = #tracks
-    for i = 1, tCount do tracks[i]:Stop(0) end
-    
-    -- Batch click
-    for _ = 1, CLICK_BATCH do
-        sendClick(VIM, unpack(clickArgs1))
-        sendClick(VIM, unpack(clickArgs2))
-    end
-    
-    -- Scan + Hit
-    fastScan(root)
-    if mobCount > 0 then
-        poolArgs[4] = hash
-        for m = 1, mobCount do
-            local mr = mobRoots[m]
-            if mr and mr.Parent then
-                poolArgs[1] = mr
-                for _ = 1, HIT_BATCH do
-                    fireServer(HitRemote, unpack(poolArgs))
-                end
-            end
+    -- Cleanup mob đã chết khỏi cache bypass
+    for mob, _ in pairs(_bypassed) do
+        if not mob.Parent or (mob:FindFirstChildOfClass("Humanoid") and mob.Humanoid.Health <= 0) then
+            _bypassed[mob] = nil
         end
     end
-end) 
+end
+
+-- =====================================================
+-- MAIN LOOP
+-- =====================================================
+RunService.RenderStepped:Connect(function()
+    if not _G.FastAttack or not _fireServer then return end
+
+    local char = LP.Character
+    if not char then return end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not root or not hum then return end
+
+    CancelAnims(hum)
+
+    -- Click ×10
+    for _ = 1, 10 do
+        _sendClick(VIM, table.unpack(_click1))
+        _sendClick(VIM, table.unpack(_click2))
+    end
+
+    -- Scan + Bypass
+    local enemies = workspace:FindFirstChild("Enemies")
+    if enemies then
+        ScanAndBypass(root, enemies)
+    end
+
+    -- Hit ×50 mỗi mob
+    if _count > 0 then
+        _args[4] = HASH
+        pcall(function()
+            for m = 1, _count do
+                local mr = _roots[m]
+                if mr and mr.Parent then
+                    _args[1] = mr
+                    for _ = 1, 50 do
+                        _fireServer(HitRemote, table.unpack(_args))
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+print("[Vexz FastAttack v2] ON | Bypass + Fix Lag | Hash:", HASH) 
