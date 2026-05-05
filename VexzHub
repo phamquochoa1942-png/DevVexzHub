@@ -1,173 +1,123 @@
--- ╔══════════════════════════════════════════════════╗
--- ║  FAST ATTACK — ULTIMATE EDITION                ║
--- ║  Tốc độ: 5000+ hits/s | Bypass Server Delay    ║
--- ╚══════════════════════════════════════════════════╝
+function FastAttack:UseFruitM1(Character, Equipped, Combo)
+    local Targets = self:GetBladeHits(Character)
+    if not Targets[1] then return end
+    
+    local Direction = (Targets[1][2].Position - Character:GetPivot().Position).Unit
+    Equipped.LeftClickRemote:FireServer(Direction, Combo)
+end
+
+function FastAttack:Attack()
+    if not Config.AutoClickEnabled or (tick() - self.Debounce) < Config.AttackCooldown then return end
+    local Character = Player.Character
+    if not Character or not self:IsEntityAlive(Character) then return end
+    
+    local Humanoid = Character.Humanoid
+    local Equipped = Character:FindFirstChildOfClass("Tool")
+    if not Equipped then return end
+    
+    local ToolTip = Equipped.ToolTip
+    if not table.find({"Melee", "Blox Fruit", "Sword", "Gun"}, ToolTip) then return end
+    
+    local Cooldown = Equipped:FindFirstChild("Cooldown") and Equipped.Cooldown.Value or Config.AttackCooldown
+    if not self:CheckStun(Character, Humanoid, ToolTip) then return end
+    
+    local Combo = self:GetCombo()
+    Cooldown = Cooldown + (Combo >= Config.MaxCombo and 0.05 or 0)
+    self.Debounce = Combo >= Config.MaxCombo and ToolTip ~= "Gun" and (tick() + 0.05) or tick()
+    
+    if ToolTip == "Blox Fruit" and Equipped:FindFirstChild("LeftClickRemote") then
+        self:UseFruitM1(Character, Equipped, Combo)
+    elseif ToolTip == "Gun" then
+        local Target = self:GetClosestEnemy(Character, 120)
+        if Target then
+            self:ShootInTarget(Target.Position)
+        end
+    else
+        self:UseNormalClick(Character, Humanoid, Cooldown)
+    end
+end
+
+local AttackInstance = FastAttack.new()
+table.insert(AttackInstance.Connections, RunService.Stepped:Connect(function()
+    AttackInstance:Attack()
+end))
+
+for _, v in pairs(getgc(true)) do
+    if typeof(v) == "function" and iscclosure(v) then
+        local name = debug.getinfo(v).name
+        if name == "Attack" or name == "attack" or name == "RegisterHit" then
+            hookfunction(v, function(...)
+                AttackInstance:Attack()
+                return v(...)
+            end)
+        end
+    end
+end
+
+---Fast 2 ---
+local Modules = game.ReplicatedStorage.Modules
+local Net = Modules.Net
+local Register_Hit, Register_Attack = Net:WaitForChild("RE/RegisterHit"), Net:WaitForChild("RE/RegisterAttack")
+local Funcs = {}
+function GetAllBladeHits()
+    bladehits = {}
+    for _, v in pairs(workspace.Enemies:GetChildren()) do
+        if v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 
+        and (v.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 65 then
+            table.insert(bladehits, v)
+        end
+    end
+    return bladehits
+end
+function Getplayerhit()
+    bladehits = {}
+    for _, v in pairs(workspace.Characters:GetChildren()) do
+        if v.Name ~= game.Players.LocalPlayer.Name and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 
+        and (v.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 65 then
+            table.insert(bladehits, v)
+        end
+    end
+    return bladehits
+end
+function Funcs:Attack()
+    local bladehits = {}
+    for r,v in pairs(GetAllBladeHits()) do
+        table.insert(bladehits, v)
+    end
+    for r,v in pairs(Getplayerhit()) do
+        table.insert(bladehits, v)
+    end
+    if #bladehits == 0 then return end
+    local args = {
+        [1] = nil;
+        [2] = {},
+        [4] = "079baa9c"
+    }
+    for r, v in pairs(bladehits) do
+        Register_Attack:FireServer(0)
+        if not args[1] then
+            args[1] = v.Head
+        end
+        args[2][r] = {
+            [1] = v,
+            [2] = v.HumanoidRootPart
+        }
+    end
+    Register_Hit:FireServer(unpack(args))
+end
+
+-- =====================================================
+-- KÍCH HOẠT
+-- =====================================================
 _G.FastAttack = true
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local VIM = game:GetService("VirtualInputManager")
-local LP = game.Players.LocalPlayer
-
--- =====================================================
--- REMOTE + HASH
--- =====================================================
-local HitRemote = ReplicatedStorage:FindFirstChild("Modules")
-    and ReplicatedStorage.Modules:FindFirstChild("Net")
-    and ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
-
-local HASH = "079baa9c"
-
-if HitRemote then
-    pcall(function()
-        local mt = getrawmetatable(game)
-        local old = mt.__namecall
-        setreadonly(mt, false)
-        mt.__namecall = newcclosure(function(self, ...)
-            if self == HitRemote then
-                local args = {...}
-                if type(args[4]) == "string" and #args[4] >= 6 then
-                    HASH = args[4]
-                end
-            end
-            return old(self, ...)
-        end)
-        setreadonly(mt, true)
-    end)
-end
-
--- =====================================================
--- PRE-ALLOCATED
--- =====================================================
-local _click1 = { 0, 0, 0, true,  game, 1 }
-local _click2 = { 0, 0, 0, false, game, 1 }
-local _args   = { nil, {}, HASH }
-local _roots  = {}
-local _count  = 0
-
-local _sendClick = VIM.SendMouseButtonEvent
-local _fireServer = HitRemote and HitRemote.FireServer
-
--- =====================================================
--- SMART BYPASS: Reset trạng thái quái để nhận hit
--- =====================================================
-local _hitCounters = {}
-
-local function SmartBypass(mob)
-    local id = tostring(mob):match("%x+")
-    if not _hitCounters[id] then
-        _hitCounters[id] = 0
-    end
-    _hitCounters[id] += 1
-    
-    -- Mỗi 200 hits, reset trạng thái mob để tránh bị bỏ qua sát thương
-    if _hitCounters[id] % 200 == 0 then
+task.spawn(function()
+    while _G.FastAttack do
         pcall(function()
-            local hum = mob:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                -- Tạm thay đổi WalkSpeed để server re-evaluate mob
-                local oldSpeed = hum.WalkSpeed
-                hum.WalkSpeed = 1
-                task.wait(0.01)
-                hum.WalkSpeed = oldSpeed
-            end
+            Funcs:Attack()
         end)
-    end
-    
-    -- Cleanup counter nếu quá lớn
-    if _hitCounters[id] > 10000 then
-        _hitCounters[id] = 0
-    end
-end
-
--- Cleanup cache khi mob chết
-local function CleanupCounters()
-    for id, _ in pairs(_hitCounters) do
-        local found = false
-        for i = 1, _count do
-            local mr = _roots[i]
-            if mr and mr.Parent then
-                local mid = tostring(mr.Parent):match("%x+")
-                if mid == id then found = true; break end
-            end
-        end
-        if not found then _hitCounters[id] = nil end
-    end
-end
-
--- =====================================================
--- CANCEL ANIMS
--- =====================================================
-local function CancelAnims(hum)
-    for _, t in ipairs(hum:GetPlayingAnimationTracks()) do t:Stop(0) end
-end
-
--- =====================================================
--- SCAN MOBS
--- =====================================================
-local function ScanMobs(root)
-    _count = 0
-    local E = workspace:FindFirstChild("Enemies")
-    if not E then return end
-    local rx, ry, rz = root.Position.X, root.Position.Y, root.Position.Z
-    for _, e in ipairs(E:GetChildren()) do
-        if e:IsA("Model") then
-            local h = e:FindFirstChildOfClass("Humanoid")
-            if h and h.Health > 0 then
-                local er = e:FindFirstChild("HumanoidRootPart")
-                if er then
-                    local dx = rx - er.Position.X
-                    local dy = ry - er.Position.Y
-                    local dz = rz - er.Position.Z
-                    if dx*dx + dy*dy + dz*dz <= 40000 then
-                        _count += 1
-                        _roots[_count] = er
-                    end
-                end
-            end
-        end
-    end
-end
-
--- =====================================================
--- MAIN LOOP — 5000+ HITS/S
--- =====================================================
-RunService.RenderStepped:Connect(function()
-    if not _G.FastAttack or not _fireServer then return end
-
-    local char = LP.Character
-    if not char then return end
-
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not root or not hum then return end
-
-    CancelAnims(hum)
-
-    -- Click ×15
-    for _ = 1, 15 do
-        _sendClick(VIM, table.unpack(_click1))
-        _sendClick(VIM, table.unpack(_click2))
-    end
-
-    ScanMobs(root)
-    CleanupCounters()
-
-    if _count > 0 then
-        _args[4] = HASH
-        for m = 1, _count do
-            local mr = _roots[m]
-            if mr and mr.Parent then
-                _args[1] = mr
-                local mob = mr.Parent
-                SmartBypass(mob)
-                -- Hit ×85 mỗi mob/frame
-                for _ = 1, 85 do
-                    _fireServer(HitRemote, table.unpack(_args))
-                end
-            end
-        end
+        task.wait()
     end
 end)
 
-print("[Vexz FastAttack ULTIMATE] ON | 5000+ hits/s | Smart Bypass") 
+print("[Fast Attack] ON | _G.FastAttack = false để tắt") 
