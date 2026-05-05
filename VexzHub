@@ -1,69 +1,298 @@
-_G.FastAttackAll = true
+-- ╔═══════════════════════════════════════╗
+-- ║  FAST ATTACK — by Quoc Hoa           ║
+-- ║  Bypass + đánh siêu nhanh            ║
+-- ╚═══════════════════════════════════════╝
 
-task.spawn(function()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players             = game:GetService("Players")
+local ReplicatedStorage   = game:GetService("ReplicatedStorage")
+local RunService          = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer         = Players.LocalPlayer
 
-    local LocalPlayer = Players.LocalPlayer
-    local AttackRemote = ReplicatedStorage:WaitForChild("Modules")
-        :WaitForChild("Net")
-        :WaitForChild("RE/RegisterHit")
+-- =====================================================
+-- REMOTE
+-- =====================================================
+local HitRemote = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
-    local BURST = 3 -- 🔥 tăng hit mỗi lần
-    local COOLDOWN = 0.06 -- 🔥 nhanh hơn
+-- =====================================================
+-- BYPASS: Hook để tự lấy hash thật từ game
+-- Hash "079baa9c" có thể đổi sau update
+-- Hook sẽ tự cập nhật hash mới nhất khi bạn tự đánh 1 lần
+-- =====================================================
+local currentHash = "079baa9c"  -- hash mặc định
 
-    -- click nhanh nhưng vừa đủ
-    task.spawn(function()
-        while _G.FastAttackAll do
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
-            VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
-            task.wait(0.03)
+pcall(function()
+    local mt  = getrawmetatable(game)
+    local old = mt.__namecall
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        if getnamecallmethod() == "FireServer" and self == HitRemote then
+            local args = {...}
+            -- Lấy hash ở index 4 nếu có
+            if args[4] and type(args[4]) == "string" then
+                currentHash = args[4]
+            end
+        end
+        return old(self, ...)
+    end)
+    setreadonly(mt, true)
+    print("[FastAttack] Hook OK — hash:", currentHash)
+end)
+
+-- =====================================================
+-- STATE
+-- =====================================================
+_G.FastAttack = true  -- tắt bằng: _G.FastAttack = false
+
+local isClicking      = false
+local currentTarget   = nil
+local noFallConn      = nil
+local originalGravity = workspace.Gravity
+
+-- =====================================================
+-- HELPERS
+-- =====================================================
+local function getChar()
+    return LocalPlayer.Character
+end
+
+local function getRoot()
+    local c = getChar()
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function resetAll()
+    isClicking    = false
+    currentTarget = nil
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = originalGravity
+    local c = getChar()
+    if not c then return end
+    local h = c:FindFirstChildOfClass("Humanoid")
+    if h then
+        h.WalkSpeed     = 16
+        h.JumpPower     = 50
+        h.PlatformStand = false
+    end
+    local r = c:FindFirstChild("HumanoidRootPart")
+    if r then
+        r.Velocity    = Vector3.zero
+        r.RotVelocity = Vector3.zero
+    end
+end
+
+-- =====================================================
+-- NO FALL — bay lên đầu mob, ghim chặt mỗi frame
+-- =====================================================
+local function startNoFall(mob)
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = 0
+
+    local c = getChar()
+    if c then
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if h then
+            h.WalkSpeed     = 0
+            h.JumpPower     = 0
+            h.PlatformStand = true
+        end
+    end
+
+    noFallConn = RunService.Heartbeat:Connect(function()
+        if not _G.FastAttack then return end
+        local root = getRoot()
+        if not root or not mob or not mob.Parent then return end
+        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+        local mobHum  = mob:FindFirstChildOfClass("Humanoid")
+        if not mobRoot or not mobHum or mobHum.Health <= 0 then return end
+
+        -- Bay Y+20 trên đầu mob, reset velocity để không tuột
+        root.CFrame      = mobRoot.CFrame * CFrame.new(0, 20, 0)
+        root.Velocity    = Vector3.zero
+        root.RotVelocity = Vector3.zero
+        root.AssemblyLinearVelocity  = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end)
+end
+
+-- =====================================================
+-- TWEEN đến mob — bay mượt về phía mob
+-- =====================================================
+local function tweenToMob(mob)
+    local root    = getRoot()
+    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+    if not root or not mobRoot then return end
+
+    -- Tắt nofall trong lúc di chuyển
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = originalGravity
+
+    local targetPos = mobRoot.Position + Vector3.new(0, 20, 0)
+    local distance  = (root.Position - targetPos).Magnitude
+    local duration  = math.clamp(distance / 300, 0.05, 0.5)
+
+    local tween = game:GetService("TweenService"):Create(
+        root,
+        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { CFrame = CFrame.new(targetPos) }
+    )
+    tween:Play()
+
+    -- Sau khi tween xong → bật nofall
+    tween.Completed:Connect(function()
+        if _G.FastAttack and currentTarget == mob then
+            startNoFall(mob)
         end
     end)
+end
 
-    while _G.FastAttackAll do
-        local Character = LocalPlayer.Character
-        if not Character then task.wait(0.1) continue end
-        
-        local Root = Character:FindFirstChild("HumanoidRootPart")
-        if not Root then task.wait(0.1) continue end
+-- =====================================================
+-- HITBOX — mở rộng hitbox mob để đánh từ trên không
+-- =====================================================
+local function expandHitbox(mob)
+    for _, p in ipairs(mob:GetDescendants()) do
+        if p:IsA("BasePart") then
+            pcall(function()
+                if p.Size.Magnitude < 40 then
+                    p.Size = Vector3.new(20, 20, 20)
+                end
+            end)
+        end
+    end
+end
 
-        local Enemies = workspace:FindFirstChild("Enemies")
-        if not Enemies then task.wait(0.1) continue end
+-- =====================================================
+-- ATTACK MOB — gửi hit remote với hash đúng
+-- =====================================================
+local function attackMob(mob)
+    local mobHum  = mob:FindFirstChildOfClass("Humanoid")
+    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+    if not mobHum or mobHum.Health <= 0 or not mobRoot then return end
 
-        for _, Enemy in ipairs(Enemies:GetChildren()) do
-            if not _G.FastAttackAll then break end
-            
-            local Hum = Enemy:FindFirstChildOfClass("Humanoid")
-            local HRP = Enemy:FindFirstChild("HumanoidRootPart")
+    -- Ưu tiên các part dễ hit nhất
+    local targetPart = mob:FindFirstChild("HumanoidRootPart")
+        or mob:FindFirstChild("Head")
+        or mob:FindFirstChild("UpperTorso")
+        or mob:FindFirstChild("Torso")
 
-            if Hum and HRP and Hum.Health > 0 then
-                local dist = (Root.Position - HRP.Position).Magnitude
+    if not targetPart then return end
 
-                if dist < 150 then
-                    
-                    -- 🔥 chọn part tốt hơn
-                    local TargetPart =
-                        Enemy:FindFirstChild("Head") or
-                        Enemy:FindFirstChild("HumanoidRootPart")
+    local args = {
+        [1] = targetPart,
+        [2] = {},
+        [4] = currentHash  -- dùng hash thật từ hook
+    }
 
-                    local args = {
-                        [1] = TargetPart,
-                        [2] = {TargetPart}, -- ✅ FIX QUAN TRỌNG
-                        [3] = nil,
-                        [4] = "079996f9"
-                    }
+    pcall(function()
+        HitRemote:FireServer(unpack(args))
+    end)
+end
 
-                    -- 🔥 BURST HIT
-                    for i = 1, BURST do
-                        AttackRemote:FireServer(unpack(args))
+-- =====================================================
+-- FIND NEAREST MOB trong folder Enemies
+-- =====================================================
+local function findNearestMob(maxDist)
+    local root = getRoot()
+    if not root then return nil end
+
+    local Enemies = workspace:FindFirstChild("Enemies")
+    if not Enemies then return nil end
+
+    local nearest     = nil
+    local nearestDist = maxDist or math.huge
+
+    for _, e in ipairs(Enemies:GetChildren()) do
+        if not e:IsA("Model") then continue end
+        local h = e:FindFirstChildOfClass("Humanoid")
+        local r = e:FindFirstChild("HumanoidRootPart")
+        if not h or h.Health <= 0 or not r then continue end
+        local dist = (root.Position - r.Position).Magnitude
+        if dist < nearestDist then
+            nearestDist = dist
+            nearest     = e
+        end
+    end
+
+    return nearest
+end
+
+-- =====================================================
+-- FAST CLICK loop — click siêu nhanh mỗi frame
+-- =====================================================
+RunService.Heartbeat:Connect(function()
+    if _G.FastAttack and isClicking then
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    end
+end)
+
+-- Click phụ để tăng tốc
+task.spawn(function()
+    while true do
+        if _G.FastAttack and isClicking then
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        end
+        task.wait(0.001)
+    end
+end)
+
+-- =====================================================
+-- MAIN LOOP
+-- =====================================================
+task.spawn(function()
+    while _G.FastAttack do
+        task.wait()
+
+        local root = getRoot()
+        local char = getChar()
+        if not root or not char then resetAll(); task.wait(0.1); continue end
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health <= 0 then resetAll(); task.wait(0.1); continue end
+
+        -- Tìm mob gần nhất
+        local target = findNearestMob(200)
+
+        if target then
+            isClicking = true
+            expandHitbox(target)
+
+            -- Bay đến mob mới nếu target thay đổi
+            if currentTarget ~= target then
+                currentTarget = target
+                tweenToMob(target)
+            end
+
+            -- Mob chết → reset target để tìm mob mới
+            local targetHum = target:FindFirstChildOfClass("Humanoid")
+            if not targetHum or targetHum.Health <= 0 then
+                currentTarget = nil
+                if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            end
+
+            -- Attack tất cả mob gần (100 studs)
+            local Enemies = workspace:FindFirstChild("Enemies")
+            if Enemies then
+                for _, e in ipairs(Enemies:GetChildren()) do
+                    if not e:IsA("Model") then continue end
+                    local er = e:FindFirstChild("HumanoidRootPart")
+                    if not er then continue end
+                    if (root.Position - er.Position).Magnitude <= 100 then
+                        attackMob(e)
                     end
                 end
             end
+        else
+            -- Không có mob → tắt hoàn toàn
+            resetAll()
         end
-
-        task.wait(COOLDOWN)
     end
+
+    -- Tắt hẳn khi _G.FastAttack = false
+    resetAll()
+    print("[FastAttack] Đã tắt")
 end)
+
+print("[FastAttack] Đã bật — hash:", currentHash)
+print("[FastAttack] Tắt bằng: _G.FastAttack = false")
