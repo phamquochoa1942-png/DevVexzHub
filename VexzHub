@@ -1,4 +1,4 @@
--- Fast Attack — GOD SPEED v5 — by Quoc Hoa
+-- Fast Attack — LIMIT BREAKER v6 — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -43,68 +43,68 @@ local function getRoot()
 end
 
 local cachedMobs = {}
-local frame = 0
 
--- ═══════════════════════════════════════════
--- LOOP CHÍNH — 60 FPS
--- ═══════════════════════════════════════════
+-- =============================================
+-- LOOP CHÍNH — Premente mỗi frame
+-- =============================================
+RunService.PreRender:Connect(function()
+    if not _G.FastAttack then return end
+    cancelAll()
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+end)
+
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
-
     cancelAll()
 
-    -- Click ×20 = 1200 clicks/giây
-    for _ = 1, 20 do
+    -- Click ×50 = 3000 clicks/giây
+    for _ = 1, 50 do
         VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
         VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end
 
     cancelAll()
 
-    frame += 1
-    if frame >= 1 then
-        frame = 0
-        local r = getRoot()
-        if r then
-            local E = workspace:FindFirstChild("Enemies")
-            cachedMobs = {}
-            if E then
-                for _, e in ipairs(E:GetChildren()) do
-                    if not e:IsA("Model") then continue end
-                    local h  = e:FindFirstChildOfClass("Humanoid")
-                    local er = e:FindFirstChild("HumanoidRootPart")
-                    if h and h.Health > 0 and er and (r.Position - er.Position).Magnitude <= 200 then
-                        table.insert(cachedMobs, er)
-                    end
+    local r = getRoot()
+    if r then
+        local E = workspace:FindFirstChild("Enemies")
+        cachedMobs = {}
+        if E then
+            for _, e in ipairs(E:GetChildren()) do
+                if not e:IsA("Model") then continue end
+                local h  = e:FindFirstChildOfClass("Humanoid")
+                local er = e:FindFirstChild("HumanoidRootPart")
+                if h and h.Health > 0 and er and (r.Position - er.Position).Magnitude <= 200 then
+                    table.insert(cachedMobs, er)
                 end
             end
         end
     end
 
-    -- FireServer ×10 mỗi mob = 600 lần/giây/mob
+    -- FireServer ×50 mỗi mob = 3000 lần/giây/mob
     for _, mr in ipairs(cachedMobs) do
         pcall(function()
-            for _ = 1, 10 do
+            for _ = 1, 50 do
                 HitRemote:FireServer(mr, {}, hash)
             end
         end)
     end
 end)
 
--- Loop phụ cancel ×5
+RunService.PostRender:Connect(function()
+    if not _G.FastAttack then return end
+    cancelAll()
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+end)
+
+-- Loop phụ
 task.spawn(function()
     while _G.FastAttack do
-        cancelAll()
-        task.wait(0)
-        cancelAll()
-        task.wait(0)
-        cancelAll()
-        task.wait(0)
-        cancelAll()
-        task.wait(0)
         cancelAll()
         task.wait(0)
     end
 end)
 
-print("[FastAttack GOD v5] ON") 
+print("[FastAttack LIMIT BREAKER v6] ON") 
