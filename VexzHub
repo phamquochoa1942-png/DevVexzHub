@@ -1,4 +1,7 @@
--- Fast Attack — LIMIT BREAKER v6 FIXED — by Quoc Hoa
+-- Fast Attack — OPTIMIZED NO LAG — by Quoc Hoa
+-- Tốc độ giữ nguyên: 3000 clicks + 3000 hits/giây
+-- Fix lag: Object Pooling + Batch Processing + Memory Pre-allocation
+
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -7,11 +10,18 @@ local RunService        = game:GetService("RunService")
 local VIM               = game:GetService("VirtualInputManager")
 local LocalPlayer       = Players.LocalPlayer
 
+-- Pre-allocate constants
+local ZERO_VECTOR = Vector3.new(0, 0, 0)
+local CLICK_TRUE  = { 0, 0, 0, true,  game, 1 }
+local CLICK_FALSE = { 0, 0, 0, false, game, 1 }
+
 local HitRemote = ReplicatedStorage:FindFirstChild("Modules")
     and ReplicatedStorage.Modules:FindFirstChild("Net")
     and ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
 
 local hash = "079baa9c"
+
+-- Hook hash
 pcall(function()
     if not HitRemote then return end
     local mt = getrawmetatable(game)
@@ -27,86 +37,120 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
+-- Pre-cache Humanoid & Root references
+local currentChar = nil
+local currentHum  = nil
+local currentRoot = nil
+
+local function updateCharacter()
+    local c = LocalPlayer.Character
+    if c ~= currentChar then
+        currentChar = c
+        currentHum  = c and c:FindFirstChildOfClass("Humanoid")
+        currentRoot = c and c:FindFirstChild("HumanoidRootPart")
+    end
+    return currentRoot
+end
+
+-- Cancel animation — optimized path
+local EMPTY_TABLE = {}
 local function cancelAll()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local tracks = hum:GetPlayingAnimationTracks()
-    if #tracks > 0 then
-        for _, track in ipairs(tracks) do
-            track:Stop(0)
+    if not currentHum then return end
+    local tracks = currentHum:GetPlayingAnimationTracks()
+    local len = #tracks
+    if len == 0 then return end
+    for i = 1, len do
+        tracks[i]:Stop(0)
+    end
+end
+
+-- Object pool cho mob list — tránh tạo table mới mỗi frame
+local mobPool = {}
+local mobCount = 0
+
+local function clearMobPool()
+    for i = 1, mobCount do
+        mobPool[i] = nil
+    end
+    mobCount = 0
+end
+
+local function addMob(er)
+    mobCount = mobCount + 1
+    mobPool[mobCount] = er
+end
+
+local function getMobs()
+    clearMobPool()
+    if not currentRoot then return end
+    local E = workspace:FindFirstChild("Enemies")
+    if not E then return end
+    local children = E:GetChildren()
+    for i = 1, #children do
+        local e = children[i]
+        if e:IsA("Model") then
+            local h  = e:FindFirstChildOfClass("Humanoid")
+            local er = e:FindFirstChild("HumanoidRootPart")
+            if h and h.Health > 0 and er then
+                local dx = currentRoot.Position.X - er.Position.X
+                local dz = currentRoot.Position.Z - er.Position.Z
+                -- So sánh nhanh không dùng .Magnitude (tránh sqrt)
+                if dx*dx + dz*dz <= 40000 then -- 200^2
+                    addMob(er)
+                end
+            end
         end
     end
 end
 
-local function getRoot()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
-
-local cachedMobs = {}
-
-local function fastClick(n)
-    for _ = 1, n do
+-- Batch click — giảm overhead gọi hàm
+local clickBatch = 0
+local function processClicks()
+    for _ = 1, 50 do
         VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
         VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end
 end
 
-local function fastHit(mr, n)
+-- Batch hit — 1 pcall cho tất cả mob
+local function processHits()
+    if mobCount == 0 then return end
+    local args = { nil, {}, hash }
     pcall(function()
-        for _ = 1, n do
-            HitRemote:FireServer(mr, {}, hash)
+        for m = 1, mobCount do
+            local mr = mobPool[m]
+            if mr and mr.Parent then
+                args[1] = mr
+                for _ = 1, 50 do
+                    HitRemote:FireServer(unpack(args))
+                end
+            end
         end
     end)
 end
 
-local lastChar = nil
-local function getChar()
-    local c = LocalPlayer.Character
-    if c ~= lastChar then
-        lastChar = c
-    end
-    return lastChar
-end
-
-RunService.RenderStepped:Connect(function(dt)
+-- Main loop — nhẹ nhất có thể
+RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
+
+    updateCharacter()
+    if not currentRoot then return end
+
     cancelAll()
-    fastClick(50)
+    processClicks()
     cancelAll()
-    local r = getRoot()
-    if r then
-        local E = workspace:FindFirstChild("Enemies")
-        if E then
-            local list = {}
-            for _, e in ipairs(E:GetChildren()) do
-                if not e:IsA("Model") then continue end
-                local h  = e:FindFirstChildOfClass("Humanoid")
-                local er = e:FindFirstChild("HumanoidRootPart")
-                if h and h.Health > 0 and er then
-                    local dist = (r.Position - er.Position).Magnitude
-                    if dist <= 200 then
-                        list[#list + 1] = er
-                    end
-                end
-            end
-            cachedMobs = list
-        end
-    end
-    if #cachedMobs > 0 then
-        for _, mr in ipairs(cachedMobs) do
-            fastHit(mr, 50)
-        end
-    end
+    getMobs()
+    processHits()
 end)
 
+-- Loop phụ cancel — dùng Heartbeat nhẹ hơn
 task.spawn(function()
     while _G.FastAttack do
-        cancelAll()
+        if currentHum then
+            cancelAll()
+        end
         RunService.Heartbeat:Wait()
     end
 end)
 
-print("[FastAttack v6 FIXED] ON | No Lag + Max Speed") 
+print("[FastAttack NO LAG] ON | 3000 clicks/s + 3000 hits/s") 
