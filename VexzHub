@@ -1,4 +1,4 @@
--- Fast Attack + Animation Cancel — by Quoc Hoa
+-- Fast Attack + Animation Cancel — TỐC ĐỘ TỐI ĐA — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -27,7 +27,6 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
--- Từ khóa animation tấn công cần cancel
 local ATTACK_KEYWORDS = {
     "attack", "slash", "punch", "kick", "hit",
     "swing", "strike", "combo", "skill", "cast",
@@ -43,7 +42,6 @@ local function isAttackAnim(track)
     return false
 end
 
--- Animation Cancel: stop ngay animation tấn công
 local function cancelAttackAnims()
     local c = LocalPlayer.Character
     if not c then return end
@@ -51,88 +49,73 @@ local function cancelAttackAnims()
     if not hum then return end
     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
         if isAttackAnim(track) then
-            track:Stop(0)  -- stop ngay lập tức, không fade
+            track:Stop(0)
         end
     end
 end
 
--- Helper
-local function getRoot()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
+-- Pre-cache tất cả mob trong 150 studs
+local cachedMobs = {}
 
-local function getMobs(maxDist)
-    local r = getRoot()
-    if not r then return {} end
+local function updateMobs()
+    local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not r then cachedMobs = {} return end
     local E = workspace:FindFirstChild("Enemies")
-    if not E then return {} end
+    if not E then cachedMobs = {} return end
     local list = {}
     for _, e in ipairs(E:GetChildren()) do
         if not e:IsA("Model") then continue end
         local h  = e:FindFirstChildOfClass("Humanoid")
         local er = e:FindFirstChild("HumanoidRootPart")
         if not h or h.Health <= 0 or not er then continue end
-        if (r.Position - er.Position).Magnitude <= maxDist then
-            table.insert(list, e)
+        if (r.Position - er.Position).Magnitude <= 150 then
+            table.insert(list, er)
         end
     end
-    return list
+    cachedMobs = list
 end
 
 -- ═══════════════════════════════════════════════
--- CORE LOOP — tốc độ tối đa
--- task.wait(0) = yield tối thiểu ~1ms
--- Mỗi iteration:
---   1. Cancel animation ngay
---   2. FireServer hit
---   3. Click ảo
+-- LOOP CHÍNH — RenderStepped = 60 lần/giây
+-- Chỉ làm 2 việc: Cancel anim + Click ảo
+-- ═══════════════════════════════════════════════
+RunService.RenderStepped:Connect(function()
+    if not _G.FastAttack then return end
+
+    cancelAttackAnims()
+
+    VIM:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+end)
+
+-- ═══════════════════════════════════════════════
+-- LOOP RIÊNG: FireServer mỗi 5 frame
+-- Không block loop chính
+-- ═══════════════════════════════════════════════
+local hitFrame = 0
+RunService.RenderStepped:Connect(function()
+    if not _G.FastAttack then return end
+    hitFrame += 1
+    if hitFrame < 3 then return end  -- Mỗi 3 frame gửi 1 lần
+    hitFrame = 0
+
+    updateMobs()
+    for _, mr in ipairs(cachedMobs) do
+        pcall(function()
+            HitRemote:FireServer(mr, {}, hash)
+        end)
+    end
+end)
+
+-- ═══════════════════════════════════════════════
+-- LOOP PHỤ: Cancel animation liên tục song song
 -- ═══════════════════════════════════════════════
 task.spawn(function()
     while _G.FastAttack do
         task.wait(0)
-
-        local mobs = getMobs(150)
-        if #mobs == 0 then continue end
-
-        -- Bước 1: Cancel animation TRƯỚC khi đánh
-        -- → animation vừa bắt đầu bị stop ngay
-        -- → server/client cho phép đòn tiếp theo ngay lập tức
         cancelAttackAnims()
-
-        -- Bước 2: FireServer cho từng mob
-        for _, mob in ipairs(mobs) do
-            local mh = mob:FindFirstChildOfClass("Humanoid")
-            local mr = mob:FindFirstChild("HumanoidRootPart")
-            if not mh or mh.Health <= 0 or not mr then continue end
-
-            local args = { [1] = mr, [2] = {}, [4] = hash }
-            pcall(function() HitRemote:FireServer(unpack(args)) end)
-        end
-
-        -- Bước 3: Click ảo trigger tool
-        VIM:SendMouseButtonEvent(0,0,0,true,game,1)
-
-        -- Bước 4: Cancel animation LẦN NỮA ngay sau click
-        -- → kill animation ngay khi nó vừa spawn
-        task.wait(0)
-        cancelAttackAnims()
-
-        VIM:SendMouseButtonEvent(0,0,0,false,game,1)
-    end
-    print("[FA] OFF")
-end)
-
--- Loop cancel phụ — liên tục kill animation song song
-task.spawn(function()
-    while _G.FastAttack do
-        task.wait(0)
-        if #getMobs(150) > 0 then
-            cancelAttackAnims()
-        end
     end
 end)
 
 print("[FA] ON | hash:", hash)
-print("[FA] OFF: _G.FastAttack = false")
- 
+print("[FA] OFF: _G.FastAttack = false") 
