@@ -1,4 +1,4 @@
--- Fast Attack + Animation Cancel — MAX SPEED — by Quoc Hoa
+-- Fast Attack — MAX SPEED v2 — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -44,24 +44,14 @@ local function isAttackAnim(track)
     return false
 end
 
--- Hủy Animation + Animator
 local function cancelAll()
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
-
-    -- Hủy Animation Track
     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
         if isAttackAnim(track) then
             track:Stop(0)
-        end
-    end
-
-    -- Hủy Animator trong character (phòng thủ)
-    for _, anim in ipairs(char:GetDescendants()) do
-        if anim:IsA("Animator") then
-            pcall(function() anim:Destroy() end)
         end
     end
 end
@@ -71,27 +61,30 @@ local function getRoot()
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
--- Cache mobs
 local cachedMobs = {}
 local mobUpdateFrame = 0
 
 -- ═══════════════════════════════════════════
--- LOOP CHÍNH: RenderStepped = 60 FPS
--- Mỗi frame: Cancel + Click ×3 + FireServer
+-- LOOP CHÍNH — TỐC ĐỘ TỐI ĐA
 -- ═══════════════════════════════════════════
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
 
-    -- Cancel animation
+    -- Cancel TRƯỚC khi click
     cancelAll()
 
     -- Click ảo ×3
-    for _ = 1, 3 do
-        VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-    end
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
+    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
 
-    -- Cập nhật mob mỗi 2 frame
+    -- Cancel SAU khi click
+    cancelAll()
+
+    -- Cập nhật mob
     mobUpdateFrame += 1
     if mobUpdateFrame >= 2 then
         mobUpdateFrame = 0
@@ -112,19 +105,19 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- FireServer mỗi frame
+    -- FireServer ×2 mỗi mob
     for _, mr in ipairs(cachedMobs) do
         pcall(function()
+            HitRemote:FireServer(mr, {}, hash)
             HitRemote:FireServer(mr, {}, hash)
         end)
     end
 end)
 
--- ═══════════════════════════════════════════
--- LOOP PHỤ: Cancel không delay (nhanh nhất)
--- ═══════════════════════════════════════════
+-- Loop phụ cancel liên tục
 task.spawn(function()
     while _G.FastAttack do
+        task.wait(0.001)
         cancelAll()
     end
 end)
