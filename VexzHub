@@ -1,225 +1,90 @@
--- Fast Attack v2 — by Quoc Hoa
-_G.FastAttack = true
+--// Toggle
+_G.FastAttack = false
 
-local Players           = game:GetService("Players")
+--// Services
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService        = game:GetService("RunService")
-local TweenService      = game:GetService("TweenService")
-local VIM               = game:GetService("VirtualInputManager")
-local LocalPlayer       = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-local HitRemote = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
+--// Player
+local LocalPlayer = Players.LocalPlayer
 
--- Hook hash tự động
-local hash = "079baa9c"
-pcall(function()
-    local mt = getrawmetatable(game)
-    local old = mt.__namecall
-    setreadonly(mt, false)
-    mt.__namecall = newcclosure(function(self, ...)
-        if getnamecallmethod() == "FireServer" and self == HitRemote then
-            local a = {...}
-            if type(a[4]) == "string" and #a[4] >= 6 then
-                hash = a[4]
-                print("[FA] Hash:", hash)
-            end
-        end
-        return old(self, ...)
-    end)
-    setreadonly(mt, true)
-    print("[FA] Hook OK")
-end)
+--// Remote
+local HitRemote = ReplicatedStorage:WaitForChild("Modules")
+    :WaitForChild("Net")
+    :WaitForChild("RE/RegisterHit")
 
--- State
-local currentTarget   = nil
-local noFallConn      = nil
-local origGravity     = workspace.Gravity
+--// Enemies
+local Enemies = workspace:WaitForChild("Enemies")
 
--- FIX QUÁI TO: lưu size gốc trước khi expand, restore khi mob chết
-local originalSizes   = {}  -- [part] = Vector3 size gốc
+--// Config
+local BURST = 3 -- 🔥 số hit mỗi lần (2-4)
+local DIST = 150
 
-local function expandHitbox(mob)
-    for _, p in ipairs(mob:GetDescendants()) do
-        if p:IsA("BasePart") then
-            -- Lưu size gốc nếu chưa lưu
-            if not originalSizes[p] then
-                originalSizes[p] = p.Size
-            end
-            -- Chỉ expand nếu part còn nhỏ (tránh expand part đã to)
-            if p.Size.X < 10 then
-                pcall(function() p.Size = Vector3.new(10, 10, 10) end)
-            end
-        end
-    end
+--// Hitbox ảo (không làm quái to)
+local function getBestPart(mob)
+    return mob:FindFirstChild("Head")
+        or mob:FindFirstChild("UpperTorso")
+        or mob:FindFirstChild("LowerTorso")
+        or mob:FindFirstChild("HumanoidRootPart")
 end
 
-local function restoreHitbox(mob)
-    for _, p in ipairs(mob:GetDescendants()) do
-        if p:IsA("BasePart") and originalSizes[p] then
-            pcall(function() p.Size = originalSizes[p] end)
-            originalSizes[p] = nil
-        end
-    end
+--// Click ảo
+local function click()
+    VirtualInputManager:SendMouseButtonEvent(0,0,0,true,game,0)
+    VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
 end
 
--- Helper
-local function getRoot()
-    local c = LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
+--// Start
+function startFastAttack()
+    if _G.FastAttack then return end
+    _G.FastAttack = true
 
-local function resetAll()
-    currentTarget = nil
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = origGravity
-    local c = LocalPlayer.Character
-    if not c then return end
-    local h = c:FindFirstChildOfClass("Humanoid")
-    if h then
-        h.WalkSpeed = 16; h.JumpPower = 50; h.PlatformStand = false
-    end
-    local r = c:FindFirstChild("HumanoidRootPart")
-    if r then
-        r.Velocity = Vector3.zero
-        r.AssemblyLinearVelocity = Vector3.zero
-    end
-end
-
--- NoFall — ghim Y+20 trên đầu mob
-local function startNoFall(mob)
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = 0
-    local c = LocalPlayer.Character
-    if c then
-        local h = c:FindFirstChildOfClass("Humanoid")
-        if h then h.WalkSpeed = 0; h.JumpPower = 0; h.PlatformStand = true end
-    end
-    noFallConn = RunService.Heartbeat:Connect(function()
+    RunService.Heartbeat:Connect(function()
         if not _G.FastAttack then return end
-        local r  = getRoot()
-        local mr = mob and mob.Parent and mob:FindFirstChild("HumanoidRootPart")
-        local mh = mob and mob:FindFirstChildOfClass("Humanoid")
-        if not r or not mr or not mh or mh.Health <= 0 then return end
-        r.CFrame                  = mr.CFrame * CFrame.new(0, 20, 0)
-        r.Velocity                = Vector3.zero
-        r.RotVelocity             = Vector3.zero
-        r.AssemblyLinearVelocity  = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
+
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        -- click sync
+        click()
+
+        for _, mob in ipairs(Enemies:GetChildren()) do
+            if not _G.FastAttack then break end
+
+            if mob:IsA("Model") then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local part = getBestPart(mob)
+
+                if hum and part and hum.Health > 0 then
+                    local dist = (part.Position - root.Position).Magnitude
+
+                    if dist <= DIST then
+                        -- 🔥 giữ nguyên args của bạn
+                        local args = {
+                            [1] = part,
+                            [2] = {}, -- ❗ giữ nguyên theo yêu cầu
+                            [4] = "079996f9"
+                        }
+
+                        -- 🔥 FAST ATTACK (BURST)
+                        for i = 1, BURST do
+                            pcall(function()
+                                HitRemote:FireServer(unpack(args))
+                            end)
+                        end
+                    end
+                end
+            end
+        end
     end)
 end
 
--- Tween đến mob
-local function tweenToMob(mob)
-    local r  = getRoot()
-    local mr = mob:FindFirstChild("HumanoidRootPart")
-    if not r or not mr then return end
-    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-    workspace.Gravity = origGravity
-    local targetPos = mr.Position + Vector3.new(0, 20, 0)
-    local dur = math.clamp((r.Position - targetPos).Magnitude / 500, 0.05, 0.4)
-    local tw = TweenService:Create(r,
-        TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        { CFrame = CFrame.new(targetPos) }
-    )
-    tw:Play()
-    tw.Completed:Connect(function()
-        if _G.FastAttack and currentTarget == mob then
-            startNoFall(mob)
-        end
-    end)
-end
-
--- Tìm tất cả mob trong range
-local function getMobs(maxDist)
-    local r = getRoot()
-    if not r then return nil, {} end
-    local E = workspace:FindFirstChild("Enemies")
-    if not E then return nil, {} end
-    local nearest, nearestDist = nil, maxDist or math.huge
-    local all = {}
-    for _, e in ipairs(E:GetChildren()) do
-        if not e:IsA("Model") then continue end
-        local h = e:FindFirstChildOfClass("Humanoid")
-        local er = e:FindFirstChild("HumanoidRootPart")
-        if not h or h.Health <= 0 or not er then continue end
-        local d = (r.Position - er.Position).Magnitude
-        if d <= (maxDist or math.huge) then
-            table.insert(all, { mob = e, dist = d })
-            if d < nearestDist then nearestDist = d; nearest = e end
-        end
-    end
-    return nearest, all
-end
-
--- ═══════════════════════════════════════════════════
--- ATTACK LOOP — chạy trên Heartbeat riêng
--- Không dùng task.wait() → nhanh tối đa
--- ═══════════════════════════════════════════════════
-RunService.Heartbeat:Connect(function()
-    if not _G.FastAttack then return end
-    local r = getRoot()
-    if not r then return end
-
-    -- Attack tất cả mob trong 150 studs
-    local _, allMobs = getMobs(150)
-    for _, item in ipairs(allMobs) do
-        local mob = item.mob
-        local mh  = mob:FindFirstChildOfClass("Humanoid")
-        local mr  = mob:FindFirstChild("HumanoidRootPart")
-        if not mh or mh.Health <= 0 or not mr then continue end
-        local args = { [1] = mr, [2] = {}, [4] = hash }
-        pcall(function() HitRemote:FireServer(unpack(args)) end)
-    end
-
-    -- VirtualInput click
-    VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
-    VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-end)
-
--- ═══════════════════════════════════════════════════
--- MANAGEMENT LOOP — chạy chậm hơn, chỉ quản lý target
--- ═══════════════════════════════════════════════════
-task.spawn(function()
-    while _G.FastAttack do
-        task.wait(0.1)  -- 10 lần/giây đủ để quản lý target
-
-        local c = LocalPlayer.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        if not c or not h or h.Health <= 0 then
-            resetAll(); continue
-        end
-
-        local nearest, _ = getMobs(200)
-
-        if nearest then
-            -- Target mới → tween đến
-            if currentTarget ~= nearest then
-                -- Restore hitbox mob cũ
-                if currentTarget then restoreHitbox(currentTarget) end
-                currentTarget = nearest
-                tweenToMob(nearest)
-            end
-
-            -- Expand hitbox target hiện tại
-            expandHitbox(nearest)
-
-            -- Mob chết → reset
-            local nh = nearest:FindFirstChildOfClass("Humanoid")
-            if not nh or nh.Health <= 0 then
-                restoreHitbox(nearest)
-                currentTarget = nil
-                if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-            end
-        else
-            if currentTarget then restoreHitbox(currentTarget) end
-            resetAll()
-        end
-    end
-
-    if currentTarget then restoreHitbox(currentTarget) end
-    resetAll()
-    print("[FA] OFF")
-end)
-
-print("[FA] ON | hash:", hash)
-print("[FA] Tắt: _G.FastAttack = false")
+--// Stop
+function stopFastAttack()
+    _G.FastAttack = false
+end 
