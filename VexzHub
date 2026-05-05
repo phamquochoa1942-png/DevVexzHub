@@ -1,4 +1,4 @@
--- Fast Attack — INSANE SPEED v4 — by Quoc Hoa
+-- Fast Attack — GOD SPEED v5 — by Quoc Hoa
 _G.FastAttack = true
 
 local Players           = game:GetService("Players")
@@ -27,23 +27,13 @@ pcall(function()
     setreadonly(mt, true)
 end)
 
-local ATTACK_KEYWORDS = {
-    "attack","slash","punch","kick","hit","swing","strike","combo","skill","cast",
-    "shoot","throw","smash","dash","ability","stab","cleave","chop","jab","uppercut",
-    "m1","light","heavy","slam","spin","m2",
-}
-
 local function cancelAll()
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
-        local id = tostring(track.Animation and track.Animation.AnimationId or ""):lower()
-        local name = track.Name:lower()
-        for _, kw in ipairs(ATTACK_KEYWORDS) do
-            if id:find(kw) or name:find(kw) then track:Stop(0); break end
-        end
+        track:Stop(0)
     end
 end
 
@@ -56,15 +46,15 @@ local cachedMobs = {}
 local frame = 0
 
 -- ═══════════════════════════════════════════
--- LOOP CHÍNH
+-- LOOP CHÍNH — 60 FPS
 -- ═══════════════════════════════════════════
 RunService.RenderStepped:Connect(function()
     if not _G.FastAttack then return end
 
     cancelAll()
 
-    -- Click ×10 mỗi frame = 600 clicks/giây
-    for _ = 1, 10 do
+    -- Click ×20 = 1200 clicks/giây
+    for _ = 1, 20 do
         VIM:SendMouseButtonEvent(0, 0, 0, true,  game, 1)
         VIM:SendMouseButtonEvent(0, 0, 0, false, game, 1)
     end
@@ -72,7 +62,7 @@ RunService.RenderStepped:Connect(function()
     cancelAll()
 
     frame += 1
-    if frame >= 2 then
+    if frame >= 1 then
         frame = 0
         local r = getRoot()
         if r then
@@ -91,17 +81,17 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- FireServer ×5 mỗi mob = 300 lần/giây/mob
+    -- FireServer ×10 mỗi mob = 600 lần/giây/mob
     for _, mr in ipairs(cachedMobs) do
         pcall(function()
-            for _ = 1, 5 do
+            for _ = 1, 10 do
                 HitRemote:FireServer(mr, {}, hash)
             end
         end)
     end
 end)
 
--- Loop phụ cancel ×3
+-- Loop phụ cancel ×5
 task.spawn(function()
     while _G.FastAttack do
         cancelAll()
@@ -110,7 +100,11 @@ task.spawn(function()
         task.wait(0)
         cancelAll()
         task.wait(0)
+        cancelAll()
+        task.wait(0)
+        cancelAll()
+        task.wait(0)
     end
 end)
 
-print("[FastAttack INSANE v4] ON") 
+print("[FastAttack GOD v5] ON") 
