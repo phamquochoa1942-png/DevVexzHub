@@ -4,7 +4,6 @@ _G.FastAttack = false
 --// Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 --// Player
@@ -19,14 +18,13 @@ local HitRemote = ReplicatedStorage:WaitForChild("Modules")
 local Enemies = workspace:WaitForChild("Enemies")
 
 --// Config
-local BURST = 3 -- 🔥 số hit mỗi lần (2-4)
+local BURST = 3
 local DIST = 150
+local ATTACK_ID = "079996f9"
 
 --// Hitbox ảo (không làm quái to)
 local function getBestPart(mob)
     return mob:FindFirstChild("Head")
-        or mob:FindFirstChild("UpperTorso")
-        or mob:FindFirstChild("LowerTorso")
         or mob:FindFirstChild("HumanoidRootPart")
 end
 
@@ -36,27 +34,26 @@ local function click()
     VirtualInputManager:SendMouseButtonEvent(0,0,0,false,game,0)
 end
 
---// Start
+--// START
 function startFastAttack()
     if _G.FastAttack then return end
     _G.FastAttack = true
 
-    RunService.Heartbeat:Connect(function()
-        if not _G.FastAttack then return end
+    task.spawn(function()
+        while _G.FastAttack do
+            
+            local char = LocalPlayer.Character
+            if not char then task.wait(0.1) continue end
 
-        local char = LocalPlayer.Character
-        if not char then return end
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then task.wait(0.1) continue end
 
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
+            -- click trước
+            click()
 
-        -- click sync
-        click()
+            for _, mob in ipairs(Enemies:GetChildren()) do
+                if not _G.FastAttack then break end
 
-        for _, mob in ipairs(Enemies:GetChildren()) do
-            if not _G.FastAttack then break end
-
-            if mob:IsA("Model") then
                 local hum = mob:FindFirstChildOfClass("Humanoid")
                 local part = getBestPart(mob)
 
@@ -64,27 +61,26 @@ function startFastAttack()
                     local dist = (part.Position - root.Position).Magnitude
 
                     if dist <= DIST then
-                        -- 🔥 giữ nguyên args của bạn
                         local args = {
                             [1] = part,
-                            [2] = {}, -- ❗ giữ nguyên theo yêu cầu
-                            [4] = "079996f9"
+                            [2] = {}, -- giữ nguyên theo bạn
+                            [4] = ATTACK_ID
                         }
 
-                        -- 🔥 FAST ATTACK (BURST)
+                        -- 🔥 FAST ATTACK
                         for i = 1, BURST do
-                            pcall(function()
-                                HitRemote:FireServer(unpack(args))
-                            end)
+                            HitRemote:FireServer(unpack(args))
                         end
                     end
                 end
             end
+
+            task.wait(0.08) -- 🔥 nhịp chuẩn (đừng để 0)
         end
     end)
 end
 
---// Stop
+--// STOP
 function stopFastAttack()
     _G.FastAttack = false
-end 
+end
