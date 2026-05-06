@@ -617,7 +617,7 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- BRING MOB (FIX TRIỆT ĐỂ)
+-- BRING MOB
 -- =====================================================
 task.spawn(function()
     while task.wait(0.3) do
@@ -627,15 +627,6 @@ task.spawn(function()
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
-            
-            -- FIX: Lưu mobName TRƯỚC KHI gọi QuestCheck
-            local mobName = Mon
-            if not mobName then
-                pcall(function() QuestCheck() end)
-                mobName = Mon
-            end
-            if not mobName then return end
-            
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
@@ -646,6 +637,10 @@ task.spawn(function()
             if hasPlayer then return end
 
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
+
+            pcall(function() QuestCheck() end)
+            local mobName = Mon
+            if not mobName then return end
 
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
@@ -844,7 +839,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- TÌM FLUENT SCREENGUI (FIX TRIỆT ĐỂ)
+-- TÌM FLUENT SCREENGUI
 -- =====================================================
 local FluentScreenGui = nil
 task.spawn(function()
@@ -853,25 +848,23 @@ task.spawn(function()
     for _, gui in ipairs(pGui:GetChildren()) do
         if gui:IsA("ScreenGui") then
             local hasContainer = false
-            local hasTitle = false
             for _, v in ipairs(gui:GetDescendants()) do
-                if v:IsA("Frame") and v.Name == "Container" then hasContainer = true end
-                if v:IsA("TextLabel") and v.Name == "Title" then hasTitle = true end
+                if v:IsA("Frame") and v.Name == "Container" then
+                    hasContainer = true
+                    break
+                end
             end
-            if hasContainer and hasTitle then
+            if hasContainer then
                 FluentScreenGui = gui
                 print("[Vexz Hub] Fluent ScreenGui found:", gui.Name)
                 break
             end
         end
     end
-    if not FluentScreenGui then
-        print("[Vexz Hub] WARNING: Fluent ScreenGui not found")
-    end
 end)
 
 -- =====================================================
--- FLOATING BUTTON (FIX TRIỆT ĐỂ)
+-- FLOATING BUTTON
 -- =====================================================
 local FloatScreenGui = Instance.new("ScreenGui")
 FloatScreenGui.Name = "VexzHub_FloatingButton"
@@ -893,24 +886,20 @@ local ButtonCorner = Instance.new("UICorner"); ButtonCorner.CornerRadius = UDim.
 ImageButton.MouseButton1Click:Connect(function()
     if FluentScreenGui then
         FluentScreenGui.Enabled = not FluentScreenGui.Enabled
-        return
-    end
-    local pGui = LP:WaitForChild("PlayerGui")
-    for _, gui in ipairs(pGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui ~= FloatScreenGui then
-            local hasContainer, hasTitle = false, false
-            for _, v in ipairs(gui:GetDescendants()) do
-                if v:IsA("Frame") and v.Name == "Container" then hasContainer = true end
-                if v:IsA("TextLabel") and v.Name == "Title" then hasTitle = true end
-            end
-            if hasContainer and hasTitle then
-                FluentScreenGui = gui
-                FluentScreenGui.Enabled = not FluentScreenGui.Enabled
-                return
+    else
+        local pGui = LP:WaitForChild("PlayerGui")
+        for _, gui in ipairs(pGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui ~= FloatScreenGui then
+                for _, v in ipairs(gui:GetDescendants()) do
+                    if v:IsA("Frame") and v.Name == "Container" then
+                        FluentScreenGui = gui
+                        FluentScreenGui.Enabled = not FluentScreenGui.Enabled
+                        return
+                    end
+                end
             end
         end
     end
-    print("[Vexz Hub] Cannot find Fluent UI to toggle")
 end)
 
 local dragging = false; local dragStart = nil; local startPos = nil
@@ -933,3 +922,4 @@ SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
 print("[Vexz Hub] Loaded! Fast Attack: ON | Auto Quest: Ready | Bring Mob: Ready | Floating Button: Goc trai") 
+ 
