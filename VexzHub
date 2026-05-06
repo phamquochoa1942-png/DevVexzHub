@@ -1,7 +1,20 @@
 -- ╔══════════════════════════════════════════════════╗
--- ║  VEXZ HUB - FULL PACKAGE                       ║
--- ║  Fast Attack + Auto Quest + Bring Mob + UI     ║
+-- ║  VEXZ HUB - FLUENT UI VERSION                  ║
+-- ║  Fast Attack + Auto Quest + Bring Mob          ║
 -- ╚══════════════════════════════════════════════════╝
+
+-- =====================================================
+-- FLUENT UI
+-- =====================================================
+local Fluent = loadstring(game:HttpGet(
+    "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
+))()
+local SaveManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"
+))()
+local InterfaceManager = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
+))()
 
 -- =====================================================
 -- SERVICES
@@ -22,16 +35,13 @@ local World1 = false
 local World2 = false
 local World3 = false
 
-if PlaceId == 2753915549 then
-    World1 = true
-elseif PlaceId == 4442272183 then
-    World2 = true
-elseif PlaceId == 7449423635 then
-    World3 = true
+if PlaceId == 2753915549 then World1 = true
+elseif PlaceId == 4442272183 then World2 = true
+elseif PlaceId == 7449423635 then World3 = true
 end
 
 -- =====================================================
--- FAST ATTACK SETUP
+-- FAST ATTACK
 -- =====================================================
 _G.FastAttack = true
 
@@ -39,7 +49,6 @@ local Modules = ReplicatedStorage:FindFirstChild("Modules")
 local Net = Modules and Modules:FindFirstChild("Net")
 local Register_Hit = Net and Net:FindFirstChild("RE/RegisterHit")
 local Register_Attack = Net and Net:FindFirstChild("RE/RegisterAttack")
-
 local HASH = "079baa9c"
 
 if Register_Hit then
@@ -50,9 +59,7 @@ if Register_Hit then
         mt.__namecall = newcclosure(function(self, ...)
             if self == Register_Hit then
                 local a = {...}
-                if type(a[4]) == "string" and #a[4] >= 6 then
-                    HASH = a[4]
-                end
+                if type(a[4]) == "string" and #a[4] >= 6 then HASH = a[4] end
             end
             return old(self, ...)
         end)
@@ -63,17 +70,11 @@ end
 local function GetAllBladeHits()
     local hits = {}
     local char = LP.Character
-    if not char then
-        return hits
-    end
+    if not char then return hits end
     local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then
-        return hits
-    end
+    if not root then return hits end
     local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then
-        return hits
-    end
+    if not enemies then return hits end
     for _, v in ipairs(enemies:GetChildren()) do
         if v:IsA("Model") then
             local hum = v:FindFirstChildOfClass("Humanoid")
@@ -88,60 +89,23 @@ end
 
 local function Attack()
     local bladehits = {}
-    for _, v in ipairs(GetAllBladeHits()) do
-        table.insert(bladehits, v)
-    end
-    if #bladehits == 0 then
-        return
-    end
-
-    local args = {
-        [1] = nil,
-        [2] = {},
-        [4] = HASH
-    }
+    for _, v in ipairs(GetAllBladeHits()) do table.insert(bladehits, v) end
+    if #bladehits == 0 then return end
+    local args = {[1] = nil, [2] = {}, [4] = HASH}
     for r, v in ipairs(bladehits) do
-        if Register_Attack then
-            Register_Attack:FireServer(0)
-        end
-        if not args[1] then
-            args[1] = v:FindFirstChild("Head") or v:FindFirstChild("HumanoidRootPart")
-        end
-        args[2][r] = {
-            [1] = v,
-            [2] = v:FindFirstChild("HumanoidRootPart")
-        }
+        if Register_Attack then Register_Attack:FireServer(0) end
+        if not args[1] then args[1] = v:FindFirstChild("Head") or v:FindFirstChild("HumanoidRootPart") end
+        args[2][r] = {[1] = v, [2] = v:FindFirstChild("HumanoidRootPart")}
     end
-    if Register_Hit then
-        Register_Hit:FireServer(unpack(args))
-    end
+    if Register_Hit then Register_Hit:FireServer(unpack(args)) end
 end
 
 task.spawn(function()
-    while _G.FastAttack do
-        pcall(Attack)
-        task.wait()
-    end
+    while _G.FastAttack do pcall(Attack) task.wait() end
 end)
 
-print("[Fast Attack] ON | Hash:", HASH)
-
 -- =====================================================
--- GET PLAYER LEVEL
--- =====================================================
-local function getPlayerLevel()
-    local stats = LP:FindFirstChild("leaderstats")
-    if stats then
-        local lv = stats:FindFirstChild("Level") or stats:FindFirstChild("Lv")
-        if lv then
-            return tonumber(lv.Value) or 1
-        end
-    end
-    return 1
-end
-
--- =====================================================
--- QUEST DATA FUNCTION
+-- QUEST DATA
 -- =====================================================
 QuestCheck = function()
 	local I = game.Players.LocalPlayer.Data.Level.Value
@@ -885,331 +849,113 @@ QuestNeta = function()
 			[6] = PosQ,
 		};
 	end;
--- LOGIC AUTO LEVEL:
-local CurrentMob = nil
-local function GetNearestMob(TargetName)
-    local plr = game.Players.LocalPlayer
-    local Root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-    if not Root then return nil end
-    local Closest, Dist = nil, math.huge    
-    for _, Mob in pairs(workspace.Enemies:GetChildren()) do    
-        if G.Alive(Mob) and Mob.Name == TargetName and Mob:FindFirstChild("HumanoidRootPart") then    
-            local d = (Mob.HumanoidRootPart.Position - Root.Position).Magnitude    
-            if d < Dist then Dist = d Closest = Mob end    
-        end    
-    end  
-    return Closest
-end
-
-spawn(function()
-    while task.wait() do
-        if _G.Level and _G.StartFarm then
-            pcall(function()
-                local plr = game.Players.LocalPlayer  
-                local Root = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")  
-                if not Root then return end  
-                local QuestTitle = plr.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text      
-                local Q = QuestNeta()  
-                if not string.find(QuestTitle, Q[5]) then game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest") end      
-                if not plr.PlayerGui.Main.Quest.Visible then      
-                    TeleportConditional(Root, Q[6], TELEPORT_DISTANCE_THRESHOLD)      
-                    if (Root.Position - Q[6].Position).Magnitude <= 50 then      
-                        task.wait(1.9)  
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", Q[3], Q[2])      
-                    end      
-                    return      
-                end      
-                local Nearest = GetNearestMob(Q[1])  
-                if CurrentMob and G.Alive(CurrentMob) and CurrentMob.Parent then      
-                    G.Kill(CurrentMob, true)      
-                    return      
-                else CurrentMob = nil end      
-                if not Nearest then TeleportConditional(Root, Q[4], TELEPORT_DISTANCE_THRESHOLD) return end
-                CurrentMob = Nearest
-                if CurrentMob and CurrentMob:FindFirstChild("HumanoidRootPart") then _tp(CurrentMob.HumanoidRootPart.CFrame) end
-                repeat task.wait() G.Kill(CurrentMob, true) until not _G.StartFarm or not _G.Level or not CurrentMob.Parent or CurrentMob.Humanoid.Health <= 0      
-                CurrentMob = nil      
-            end)  
-        end  
-    end
-end)
 
 -- =====================================================
 -- GLOBAL STATE
 -- =====================================================
 local Mon = nil
-local LevelQuest = nil
-local NameQuest = nil
+local Qdata = nil
+local Qname = nil
 local NameMon = nil
-local CFrameQuest = nil
-local CFrameMon = nil
+local PosQ = nil
+local PosM = nil
 local StartFarm = false
 local BringMobEnabled = false
 local MaxBringCount = 2
 local FarmPos = nil
 
 -- =====================================================
--- BRING MOB
+-- TWEEN FUNCTION
 -- =====================================================
-task.spawn(function()
-    while task.wait(0.3) do
-        pcall(function()
-            if not BringMobEnabled then return end
-            if not StartFarm then return end
-            if not FarmPos then return end
-            
-            local char = LP.Character
-            if not char then return end
-            
-            local myHRP = char:FindFirstChild("HumanoidRootPart")
-            if not myHRP then return end
-            
-            local hasPlayer = false
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LP and p.Character then
-                    local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
-                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then
-                        hasPlayer = true
-                        break
-                    end
-                end
-            end
-            if hasPlayer then return end
-            
-            pcall(function()
-                sethiddenproperty(LP, "SimulationRadius", math.huge)
-            end)
-            
-            local brought = 0
-            for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                if brought >= MaxBringCount then break end
-                if not v:IsA("Model") then continue end
-                
-                local hum = v:FindFirstChild("Humanoid")
-                local hrp = v:FindFirstChild("HumanoidRootPart")
-                if not hum or hum.Health <= 0 or not hrp then continue end
-                if v.Name ~= Mon then continue end
-                
-                local dist = (hrp.Position - FarmPos).Magnitude
-                if dist > 8 and dist <= 350 then
-                    task.spawn(function()
-                        pcall(function()
-                            if dist > 150 then
-                                hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 3, 0))
-                                task.wait(0.05)
-                            end
-                            
-                            local tween = TweenService:Create(
-                                hrp,
-                                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                                { CFrame = CFrame.new(FarmPos) }
-                            )
-                            
-                            hrp.CanCollide = false
-                            hrp.Size = Vector3.new(60, 60, 60)
-                            hrp.Velocity = Vector3.zero
-                            hrp.AssemblyLinearVelocity = Vector3.zero
-                            hum.WalkSpeed = 0
-                            hum.JumpPower = 0
-                            
-                            if v:FindFirstChild("Head") then
-                                v.Head.CanCollide = false
-                            end
-                            
-                            pcall(function()
-                                local anim = hum:FindFirstChild("Animator")
-                                if anim then anim:Destroy() end
-                            end)
-                            
-                            tween:Play()
-                        end)
-                    end)
-                    brought = brought + 1
-                end
-            end
-        end)
-    end
-end)
-
--- =====================================================
--- AUTO QUEST + FARM
--- =====================================================
-local CurrentMob = nil
-
-local function GetNearestMob(TargetName)
-    local char = LP.Character
-    if not char then return nil end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
-
-    local Closest = nil
-    local Dist    = math.huge
-
-    -- Tìm trong workspace.Enemies, có pcall tránh crash
-    local Enemies = workspace:FindFirstChild("Enemies")
-    if not Enemies then return nil end
-
-    for _, Mob in pairs(Enemies:GetChildren()) do
-        if not Mob:IsA("Model") then continue end
-        local hum = Mob:FindFirstChildOfClass("Humanoid")
-        local hrp = Mob:FindFirstChild("HumanoidRootPart")
-        if not hum or hum.Health <= 0 or not hrp then continue end
-        -- Tìm theo tên chính xác hoặc tên chứa TargetName
-        if Mob.Name ~= TargetName and not Mob.Name:find(TargetName) then continue end
-        local d = (hrp.Position - root.Position).Magnitude
-        if d < Dist then
-            Dist    = d
-            Closest = Mob
-        end
-    end
-    return Closest
-end
-
-local activeTween = nil
-
-local function topos(pos)
-    pcall(function()
-        local char = LP.Character
-        if not char then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not root then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-
-        -- Tắt gravity + khóa nhân vật để không bị rơi khi Tween
-        workspace.Gravity = 0
-        if hum then
-            hum.WalkSpeed = 0
-            hum.JumpPower = 0
-            hum.PlatformStand = true
-        end
-
-        -- Cancel tween cũ nếu đang chạy
-        if activeTween then
-            activeTween:Cancel()
-            activeTween = nil
-        end
-
-        local dist = (pos.Position - root.Position).Magnitude
-        if dist > 5 then
-            local speed = 350
-            local dur = math.clamp(dist / speed, 0.05, 3)
-            local tween = TweenService:Create(
-                root,
-                TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                { CFrame = pos }
-            )
-            activeTween = tween
-            tween:Play()
-
-            -- Giữ velocity = 0 trong lúc tween để không bị drift
-            local conn
-            conn = RunService.Heartbeat:Connect(function()
-                if root and root.Parent then
-                    root.Velocity = Vector3.zero
-                    root.AssemblyLinearVelocity = Vector3.zero
-                else
-                    conn:Disconnect()
-                end
-            end)
-
-            tween.Completed:Connect(function()
-                conn:Disconnect()
-                activeTween = nil
-                -- Khôi phục gravity sau khi đến nơi
-                workspace.Gravity = 196.2
-                if hum then
-                    hum.WalkSpeed = 16
-                    hum.JumpPower = 50
-                    hum.PlatformStand = false
-                end
-            end)
-        else
-            root.CFrame = pos
-            workspace.Gravity = 196.2
-            if hum then
-                hum.WalkSpeed = 16
-                hum.JumpPower = 50
-                hum.PlatformStand = false
-            end
-        end
-    end)
-end
-
--- ══════════════════════════════════════════════════
--- AUTO FARM + AUTO QUEST — Rewrite hoàn toàn
--- Dùng CFrame lerp thay Tween để đảm bảo hoạt động
--- ══════════════════════════════════════════════════
-
 local activeFlyConn = nil
 
--- TweenTo: Tween mượt đến vị trí, BLOCKING (chờ đến nơi)
 local function tweenTo(targetCF, speed)
     speed = speed or 200
     local char = LP.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-    local hum  = char:FindFirstChildOfClass("Humanoid")
+    local hum = char:FindFirstChildOfClass("Humanoid")
 
-    -- Tắt gravity + khóa nhân vật
     workspace.Gravity = 0
     if hum then
-        hum.WalkSpeed     = 0
-        hum.JumpPower     = 0
-        hum.PlatformStand = true
-        hum.AutoRotate    = false
+        hum.WalkSpeed = 0; hum.JumpPower = 0
+        hum.PlatformStand = true; hum.AutoRotate = false
     end
     for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
-            p.CanCollide = false
-        end
+        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
     end
 
-    -- Cancel conn cũ
     if activeFlyConn then activeFlyConn:Disconnect(); activeFlyConn = nil end
 
     local arrived = false
     activeFlyConn = RunService.RenderStepped:Connect(function(dt)
-        if not root or not root.Parent then
-            activeFlyConn:Disconnect(); activeFlyConn = nil
-            arrived = true; return
-        end
+        if not root or not root.Parent then activeFlyConn:Disconnect(); activeFlyConn = nil; arrived = true; return end
         local diff = targetCF.Position - root.Position
         local dist = diff.Magnitude
         if dist < 3 then
             root.CFrame = targetCF
-            root.Velocity = Vector3.zero
-            root.AssemblyLinearVelocity = Vector3.zero
-            activeFlyConn:Disconnect(); activeFlyConn = nil
-            arrived = true; return
+            root.Velocity = Vector3.zero; root.AssemblyLinearVelocity = Vector3.zero
+            activeFlyConn:Disconnect(); activeFlyConn = nil; arrived = true; return
         end
         local step = math.min(speed * dt, dist)
         root.CFrame = CFrame.new(root.Position + diff.Unit * step)
-        root.Velocity = Vector3.zero
-        root.AssemblyLinearVelocity = Vector3.zero
+        root.Velocity = Vector3.zero; root.AssemblyLinearVelocity = Vector3.zero
     end)
 
-    -- Chờ đến nơi (timeout 10s)
     local t = 0
     repeat task.wait(0.05); t = t + 0.05 until arrived or t >= 10
 
-    -- Khôi phục
     workspace.Gravity = 196.2
     if hum then
-        hum.WalkSpeed     = 16
-        hum.JumpPower     = 50
-        hum.PlatformStand = false
-        hum.AutoRotate    = true
+        hum.WalkSpeed = 16; hum.JumpPower = 50
+        hum.PlatformStand = false; hum.AutoRotate = true
     end
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then p.CanCollide = true end
     end
 end
 
--- Đọc trạng thái quest an toàn
+-- =====================================================
+-- NOFALL
+-- =====================================================
+local noFallConn2 = nil
+
+local function startNoFallOnMob(mob)
+    if noFallConn2 then noFallConn2:Disconnect(); noFallConn2 = nil end
+    workspace.Gravity = 0
+    noFallConn2 = RunService.RenderStepped:Connect(function()
+        if not StartFarm then noFallConn2:Disconnect(); noFallConn2 = nil; return end
+        local char = LP.Character
+        if not char then return end
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not mob or not mob.Parent then noFallConn2:Disconnect(); noFallConn2 = nil; return end
+        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+        local mobHum = mob:FindFirstChildOfClass("Humanoid")
+        if not mobRoot or not mobHum or mobHum.Health <= 0 then noFallConn2:Disconnect(); noFallConn2 = nil; return end
+        if root then
+            root.CFrame = mobRoot.CFrame * CFrame.new(0, 15, 0)
+            root.Velocity = Vector3.zero; root.RotVelocity = Vector3.zero
+            root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
+        end
+    end)
+end
+
+local function stopNoFall()
+    if noFallConn2 then noFallConn2:Disconnect(); noFallConn2 = nil end
+    workspace.Gravity = 196.2
+    local char = LP.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false end
+end
+
+-- =====================================================
+-- GET QUEST STATE
+-- =====================================================
 local function getQuestState()
     local visible = false
-    local title   = ""
+    local title = ""
     pcall(function()
         local main = LP.PlayerGui:FindFirstChild("Main")
         if not main then return end
@@ -1225,90 +971,91 @@ local function getQuestState()
     return visible, title
 end
 
--- Nhận quest: Tween đến NPC → StartQuest → Tween đến mob
-local function doAcceptQuest(qName, qLevel, qPos, mPos)
-    if not qPos then return false end
+-- =====================================================
+-- FIND MOB
+-- =====================================================
+local function GetNearestMob(TargetName)
     local char = LP.Character
-    if not char then return false end
-
-    print("[Farm] >> Tween đến NPC quest:", qName)
-
-    -- Tween đến NPC quest
-    tweenTo(qPos, 250)
-    task.wait(0.5)
-
-    -- Đảm bảo đến gần NPC
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-    if (root.Position - qPos.Position).Magnitude > 20 then
-        root.CFrame = qPos  -- teleport thẳng nếu chưa tới
-        task.wait(0.3)
+    if not char then return nil end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    local Closest = nil
+    local Dist = math.huge
+    local Enemies = workspace:FindFirstChild("Enemies")
+    if not Enemies then return nil end
+    for _, Mob in pairs(Enemies:GetChildren()) do
+        if not Mob:IsA("Model") then continue end
+        local hum = Mob:FindFirstChildOfClass("Humanoid")
+        local hrp = Mob:FindFirstChild("HumanoidRootPart")
+        if not hum or hum.Health <= 0 or not hrp then continue end
+        if Mob.Name ~= TargetName and not Mob.Name:find(TargetName) then continue end
+        local d = (hrp.Position - root.Position).Magnitude
+        if d < Dist then Dist = d; Closest = Mob end
     end
-
-    -- Nhận quest
-    pcall(function()
-        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel)
-    end)
-    task.wait(0.5)
-    print("[Farm] >> Đã nhận quest:", qName)
-
-    -- Tween đến vị trí mob
-    if mPos then
-        print("[Farm] >> Tween đến mob:", Mon)
-        tweenTo(mPos, 300)
-        task.wait(0.3)
-    end
-
-    return true
+    return Closest
 end
 
--- NoFall conn: ghim nhân vật trên đầu mob
-local noFallConn2 = nil
-local function startNoFallOnMob(mob)
-    if noFallConn2 then noFallConn2:Disconnect(); noFallConn2 = nil end
-    workspace.Gravity = 0
+-- =====================================================
+-- BRING MOB
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.3) do
+        pcall(function()
+            if not BringMobEnabled or not StartFarm or not FarmPos then return end
+            local char = LP.Character
+            if not char then return end
+            local myHRP = char:FindFirstChild("HumanoidRootPart")
+            if not myHRP then return end
 
-    noFallConn2 = RunService.RenderStepped:Connect(function()
-        if not StartFarm then
-            noFallConn2:Disconnect(); noFallConn2 = nil; return
-        end
-        local char = LP.Character
-        if not char then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if not mob or not mob.Parent then
-            noFallConn2:Disconnect(); noFallConn2 = nil; return
-        end
-        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-        local mobHum  = mob:FindFirstChildOfClass("Humanoid")
-        if not mobRoot or not mobHum or mobHum.Health <= 0 then
-            noFallConn2:Disconnect(); noFallConn2 = nil; return
-        end
-        if root then
-            root.CFrame                  = mobRoot.CFrame * CFrame.new(0, 15, 0)
-            root.Velocity                = Vector3.zero
-            root.RotVelocity             = Vector3.zero
-            root.AssemblyLinearVelocity  = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
-        end
-    end)
-end
+            -- Check người chơi khác
+            local hasPlayer = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and p.Character then
+                    local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then
+                        hasPlayer = true; break
+                    end
+                end
+            end
+            if hasPlayer then return end
 
-local function stopNoFall()
-    if noFallConn2 then noFallConn2:Disconnect(); noFallConn2 = nil end
-    workspace.Gravity = 196.2
-    local char = LP.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = 16; hum.JumpPower = 50
-        hum.PlatformStand = false
+            pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
+
+            local brought = 0
+            for _, v in ipairs(workspace.Enemies:GetChildren()) do
+                if brought >= MaxBringCount then break end
+                if not v:IsA("Model") then continue end
+                local hum = v:FindFirstChild("Humanoid")
+                local hrp = v:FindFirstChild("HumanoidRootPart")
+                if not hum or hum.Health <= 0 or not hrp then continue end
+                if v.Name ~= Mon then continue end
+                local dist = (hrp.Position - FarmPos).Magnitude
+                if dist > 8 and dist <= 350 then
+                    task.spawn(function()
+                        pcall(function()
+                            if dist > 150 then
+                                hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 3, 0))
+                                task.wait(0.05)
+                            end
+                            local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(FarmPos)})
+                            hrp.CanCollide = false; hrp.Size = Vector3.new(60, 60, 60)
+                            hrp.Velocity = Vector3.zero; hrp.AssemblyLinearVelocity = Vector3.zero
+                            hum.WalkSpeed = 0; hum.JumpPower = 0
+                            if v:FindFirstChild("Head") then v.Head.CanCollide = false end
+                            pcall(function() local anim = hum:FindFirstChild("Animator"); if anim then anim:Destroy() end end)
+                            tween:Play()
+                        end)
+                    end)
+                    brought = brought + 1
+                end
+            end
+        end)
     end
-end
+end)
 
--- ══════════════════════════════════════════════════
+-- =====================================================
 -- MAIN FARM LOOP
--- Bật StartFarm → 1.Quest → 2.Bay mob → 3.Farm → lặp
--- ══════════════════════════════════════════════════
+-- =====================================================
 local CurrentMob2 = nil
 
 task.spawn(function()
@@ -1319,213 +1066,160 @@ task.spawn(function()
             continue
         end
 
-        -- Lấy data level hiện tại
         pcall(function() CheckQuest() end)
-
-        -- Đồng bộ tên biến (CheckQuest set Qname/Qdata/PosQ/PosM)
-        local qName  = Qname  or NameQuest
-        local qLevel = Qdata  or LevelQuest
-        local qPos   = PosQ   or CFrameQuest
-        local mPos   = PosM   or CFrameMon
+        local qName = Qname
+        local qLevel = Qdata
+        local qPos = PosQ
+        local mPos = PosM
         local mobName = Mon
 
-        if not qName or not qPos or not mobName then
-            task.wait(1); continue
-        end
+        if not qName or not qPos or not mobName then task.wait(1); continue end
 
-        -- BƯỚC 1: Kiểm tra quest
         local questVisible, questTitle = getQuestState()
 
-        -- Abandon quest sai
         if questVisible and questTitle ~= "" then
             if not questTitle:find(mobName) then
-                pcall(function()
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
-                end)
-                task.wait(0.5)
-                questVisible = false
+                pcall(function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest") end)
+                task.wait(0.5); questVisible = false
             end
         end
 
-        -- Nhận quest nếu chưa có
         if not questVisible then
-            doAcceptQuest(qName, qLevel, qPos, mPos)
-            task.wait(0.3)
+            tweenTo(qPos, 250)
+            task.wait(0.5)
+            local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if root and (root.Position - qPos.Position).Magnitude > 20 then root.CFrame = qPos; task.wait(0.3) end
+            pcall(function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel) end)
+            task.wait(0.5)
+            if mPos then tweenTo(mPos, 300); task.wait(0.3) end
             continue
         end
 
-        -- BƯỚC 2: Cập nhật CurrentMob
         if CurrentMob2 then
             local mh = CurrentMob2:FindFirstChildOfClass("Humanoid")
-            if not CurrentMob2.Parent or not mh or mh.Health <= 0 then
-                stopNoFall()
-                CurrentMob2 = nil
-            end
+            if not CurrentMob2.Parent or not mh or mh.Health <= 0 then stopNoFall(); CurrentMob2 = nil end
         end
 
-        -- Tìm mob mới
-        if not CurrentMob2 then
-            CurrentMob2 = GetNearestMob(mobName)
-        end
+        if not CurrentMob2 then CurrentMob2 = GetNearestMob(mobName) end
 
-        -- Không có mob → tween về vị trí mặc định
         if not CurrentMob2 then
             if mPos then tweenTo(mPos, 200) end
             task.wait(0.5); continue
         end
 
-        -- BƯỚC 3: Tween đến mob + ghim
         local mobRoot = CurrentMob2:FindFirstChild("HumanoidRootPart")
         if not mobRoot then CurrentMob2 = nil; continue end
 
-        -- Tween đến Y+15 trên đầu mob
+        FarmPos = mobRoot.Position
         local targetCF = mobRoot.CFrame * CFrame.new(0, 15, 0)
         tweenTo(targetCF, 300)
-
-        -- Bật NoFall ghim trên đầu mob
         startNoFallOnMob(CurrentMob2)
 
-        -- Chờ mob chết
         repeat
             task.wait(0.1)
             if not CurrentMob2 or not CurrentMob2.Parent then break end
             local mh2 = CurrentMob2:FindFirstChildOfClass("Humanoid")
             if not mh2 or mh2.Health <= 0 then break end
+            FarmPos = CurrentMob2:FindFirstChild("HumanoidRootPart") and CurrentMob2.HumanoidRootPart.Position or FarmPos
         until not StartFarm
 
-        stopNoFall()
-        CurrentMob2 = nil
+        stopNoFall(); CurrentMob2 = nil
     end
 end)
 
 -- =====================================================
--- UI - VEXZ HUB
+-- FLUENT UI
 -- =====================================================
-local Library = (loadstring(game:HttpGet("https://raw.githubusercontent.com/phamquochoa1942-png/uiVexzHub/refs/heads/main/VexzHub")))();
-local Window = Library:CreateWindow({ Title = "Vexz Hub", Subtitle = "- Blox Fruit", Image = "rbxassetid://93384558628762" });
+local Window = Fluent:CreateWindow({
+    Title       = "Vexz Hub",
+    SubTitle    = "Blox Fruit",
+    TabWidth    = 160,
+    Size        = UDim2.fromOffset(580, 440),
+    Acrylic     = true,
+    Theme       = "Pink",
+    MinimizeKey = Enum.KeyCode.RightShift,
+})
 
-wait(1);
-Library:Notify({ Title = "Vexz Hub", Description = "The UI automatically hides once executed.\nPress the button at the bottom-left of the screen to show the GUI.", Duration = 3 });
+local Tabs = {
+    Farm   = Window:AddTab({ Title = "Farm",   Icon = "swords" }),
+    Mob    = Window:AddTab({ Title = "Mob",    Icon = "zap" }),
+    Misc   = Window:AddTab({ Title = "Misc",   Icon = "settings" }),
+}
 
--- Tabs
-local ShopTab = Window:AddTab("Shop");
-local StatusServerTab = Window:AddTab("Status And Server");
-local LocalplayerTab = Window:AddTab("Localplayer");
-local SettingFarmTab = Window:AddTab("Setting Farm");
-local HoldSelectSkillTab = Window:AddTab("Hold And Select Skill");
-local FarmingTab = Window:AddTab("Farming");
+-- =====================================================
+-- TAB FARM
+-- =====================================================
+Tabs.Farm:AddSection("Auto Farm")
 
--- ===================== SHOP TAB =====================
-local MiscShop = ShopTab:AddLeftGroupbox("Misc Shop");
-MiscShop:AddButton({ Title = "Redeem Code", Callback = function()
-    local codes = {"WildDares", "BossBuild", "GetPranked", "Sub2OfficialNoobie", "Sub2Daigrock", "Sub2NoobMaster123", "Bluxxy", "JCWK", "Enyu_is_Pro", "Sub2Fer999", "kittgaming", "TheGreatAce", "StrawHatMaine", "TantaiGaming", "Axiore", "SUB2GAMERROBOT_EXP1", "MagicBus", "StarcodeHEO", "Sub2CaptainMaui", "FIGHT4FRUIT", "EARN_FRUITS"}
-    for _, v in pairs(codes) do
-        game:GetService("ReplicatedStorage").Remotes.Redeem:InvokeServer(v)
+Tabs.Farm:AddToggle("StartFarm", {
+    Title       = "Start Farm",
+    Description = "Auto Quest + Farm Level",
+    Default     = false,
+}):OnChanged(function(v) StartFarm = v end)
+
+-- =====================================================
+-- TAB MOB
+-- =====================================================
+Tabs.Mob:AddSection("Bring Mob")
+
+Tabs.Mob:AddToggle("BringMob", {
+    Title       = "Bring Mob",
+    Description = "Kéo quái về 1 chỗ",
+    Default     = false,
+}):OnChanged(function(v) BringMobEnabled = v end)
+
+Tabs.Mob:AddSlider("BringCount", {
+    Title    = "Bring Mob Count",
+    Default  = 2,
+    Min      = 2,
+    Max      = 6,
+    Rounding = 1,
+}):OnChanged(function(v) MaxBringCount = v end)
+
+-- =====================================================
+-- TAB MISC
+-- =====================================================
+Tabs.Misc:AddSection("Settings")
+Tabs.Misc:AddParagraph({ Title = "Phím tắt", Content = "RightShift — Ẩn/Hiện UI" })
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+InterfaceManager:SetFolder("VexzHub")
+SaveManager:SetFolder("VexzHub/configs")
+SaveManager:BuildConfigSection(Tabs.Misc)
+InterfaceManager:BuildInterfaceSection(Tabs.Misc)
+
+-- =====================================================
+-- LOGO + BO TRÒN UI
+-- =====================================================
+task.spawn(function()
+    task.wait(0.5)
+    local pGui = LP:WaitForChild("PlayerGui")
+    for _, gui in ipairs(pGui:GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            for _, v in ipairs(gui:GetDescendants()) do
+                if v:IsA("TextLabel") and v.Name == "Title" then
+                    local logo = Instance.new("ImageLabel")
+                    logo.Image = "rbxassetid://93384558628762"
+                    logo.Size = UDim2.new(0, 24, 0, 24)
+                    logo.Position = UDim2.new(0, -30, 0.5, -12)
+                    logo.BackgroundTransparency = 1
+                    local logoCorner = Instance.new("UICorner")
+                    logoCorner.CornerRadius = UDim.new(1, 0)
+                    logoCorner.Parent = logo
+                    logo.ZIndex = 10
+                    logo.Parent = v.Parent
+                    break
+                end
+            end
+        end
     end
-end });
-MiscShop:AddButton({ Title = "Teleport Old World", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelMain") end });
-MiscShop:AddButton({ Title = "Teleport New World", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelDressrosa") end });
-MiscShop:AddButton({ Title = "Teleport Third Sea", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelZou") end });
-MiscShop:AddButton({ Title = "Reroll Race", Callback = function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Reroll", "1")
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Reroll", "2")
-end });
-MiscShop:AddButton({ Title = "Reset Stats", Callback = function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Refund", "1")
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Refund", "2")
-end });
-MiscShop:AddButton({ Title = "Buy Race Cyborg", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CyborgTrainer", "Buy") end });
-MiscShop:AddButton({ Title = "Buy Race Ghoul", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("Ectoplasm", "Change", 4) end });
+end)
 
-local FightingShop = ShopTab:AddLeftGroupbox("Fighting Shop");
-FightingShop:AddButton({ Title = "Black Leg", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyBlackLeg") end });
-FightingShop:AddButton({ Title = "Fishman Karate", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyFishmanKarate") end });
-FightingShop:AddButton({ Title = "Electro", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectro") end });
-FightingShop:AddButton({ Title = "Dragon Breath", Callback = function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "DragonClaw", "1")
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "DragonClaw", "2")
-end });
-FightingShop:AddButton({ Title = "SuperHuman", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySuperhuman") end });
-FightingShop:AddButton({ Title = "Death Step", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDeathStep") end });
-FightingShop:AddButton({ Title = "Sharkman Karate", Callback = function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate", true)
-    task.wait(0.2)
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkmanKarate")
-end });
-FightingShop:AddButton({ Title = "Electric Claw", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyElectricClaw") end });
-FightingShop:AddButton({ Title = "Dragon Talon", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyDragonTalon") end });
-FightingShop:AddButton({ Title = "God Human", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyGodhuman") end });
-FightingShop:AddButton({ Title = "Sanguine Art", Callback = function()
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySanguineArt", true)
-    task.wait(0.2)
-    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySanguineArt")
-end });
+SaveManager:LoadAutoloadConfig()
+Window:SelectTab(1)
 
-local AbilitiesShop = ShopTab:AddLeftGroupbox("Abilities Shop");
-AbilitiesShop:AddButton({ Title = "Skyjump [ $10,000 Beli ]", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyHaki", "Geppo") end });
-AbilitiesShop:AddButton({ Title = "Buso Haki [ $25,000 Beli ]", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyHaki", "Buso") end });
-AbilitiesShop:AddButton({ Title = "Observation Haki [ $750,000 Beli ]", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("KenTalk", "Buy") end });
-AbilitiesShop:AddButton({ Title = "Soru [ $100,000 Beli ]", Callback = function() game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyHaki", "Soru") end });
-
--- ===================== STATUS AND SERVER TAB =====================
-local StatusSection = StatusServerTab:AddLeftGroupbox("Status");
-StatusSection:AddLabel("Timer: 0h 0m 0s");
-StatusSection:AddLabel("Server Timer: 0h 0m 0s");
-StatusSection:AddLabel("Elite Hunter: X");
-StatusSection:AddLabel("Mirage Island: X");
-StatusSection:AddLabel("Prehistoric Island: X");
-StatusSection:AddLabel("Frozen Dimension: X");
-StatusSection:AddLabel("Moon Phase: ...");
-
-local ServerSection = StatusServerTab:AddLeftGroupbox("Server");
-ServerSection:AddLabel("PlaceId: " .. tostring(PlaceId));
-
--- ===================== LOCALPLAYER TAB =====================
-local LocalPlayerSection = LocalplayerTab:AddLeftGroupbox("Local Player");
-LocalPlayerSection:AddButton({ Title = "Stop Tween", Callback = function() end });
-LocalPlayerSection:AddButton({ Title = "Fix UI Button Game", Callback = function() end });
-LocalPlayerSection:AddToggle("Noclip", { Title = "Noclip", Default = false, Callback = function(v) end });
-
--- ===================== SETTING FARM TAB =====================
-local SettingFarmSection = SettingFarmTab:AddLeftGroupbox("Setting Farm");
-SettingFarmSection:AddDropdown("SelectWeapon", {
-    Title = "Select Weapon",
-    Values = {"Melee", "Sword", "Gun", "Blox Fruit"},
-    Default = "Melee",
-    Multi = false,
-    Callback = function(v) end,
-});
-SettingFarmSection:AddToggle("AutoTurnOnBuso", { Title = "Auto Turn On Buso", Default = false, Callback = function(v) end });
-SettingFarmSection:AddSlider({
-    Title = "Bring Mob Count",
-    Min = 2, Max = 6, Default = 2,
-    Callback = function(v) MaxBringCount = v end,
-});
-SettingFarmSection:AddToggle("BringMob", { Title = "Bring Mob", Default = false, Callback = function(v) BringMobEnabled = v end });
-SettingFarmSection:AddSlider({
-    Title = "Speed Tween",
-    Min = 350, Max = 1000, Default = 350,
-    Callback = function(v) end,
-});
-
--- ===================== FARMING TAB =====================
-local FarmingSection = FarmingTab:AddLeftGroupbox("Setting Farm");
-FarmingSection:AddDropdown("SelectMethodFarm", {
-    Title = "Select Method Farm",
-    Values = {"Level Farm", "Bone Farm", "Katakuri Farm"},
-    Default = "Level Farm",
-    Multi = false,
-    Callback = function(v) end,
-});
-FarmingSection:AddSlider({
-    Title = "Distance Farm Aura",
-    Min = 100, Max = 1000, Default = 300,
-    Callback = function(v) end,
-});
-FarmingSection:AddToggle("StartFarm", { Title = "Start Farm", Default = false, Callback = function(v) StartFarm = v end });
-
-print("[Vexz Hub] Full Package Loaded!")
+print("[Vexz Hub] Fluent UI Loaded!")
 print("  - Fast Attack: ON")
 print("  - Auto Quest: Ready")
-print("  - Bring Mob: Ready")
-print("  - UI: Loaded") 
+print("  - Bring Mob: Ready") 
