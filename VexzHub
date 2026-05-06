@@ -1,20 +1,44 @@
 -- ╔══════════════════════════════════════════════════╗
--- ║  VEXZ HUB - FLUENT UI (ORIGINAL QUEST)         ║
+-- ║  VEXZ HUB - FLUENT UI (FIXED ALL)              ║
 -- ║  Fast Attack + Auto Quest + Bring Mob          ║
 -- ╚══════════════════════════════════════════════════╝
 
 -- =====================================================
--- FLUENT UI
+-- FLUENT UI (CÓ PCALL CHỐNG LỖI)
 -- =====================================================
-local Fluent = loadstring(game:HttpGet(
-    "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
-))()
-local SaveManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"
-))()
-local InterfaceManager = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
-))()
+local Fluent, SaveManager, InterfaceManager
+
+local success1, err1 = pcall(function()
+    Fluent = loadstring(game:HttpGet(
+        "https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"
+    ))()
+end)
+if not success1 then
+    warn("[Vexz Hub] Fluent load failed:", err1)
+    pcall(function()
+        Fluent = loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/dawid-scripts/Fluent/main/main.lua"
+        ))()
+    end)
+end
+
+if Fluent then
+    pcall(function()
+        SaveManager = loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"
+        ))()
+    end)
+    pcall(function()
+        InterfaceManager = loadstring(game:HttpGet(
+            "https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"
+        ))()
+    end)
+end
+
+if not Fluent then
+    print("[Vexz Hub] FATAL: Cannot load Fluent UI. Script stopped.")
+    return
+end
 
 -- =====================================================
 -- SERVICES
@@ -649,7 +673,8 @@ end)
 
 -- =====================================================
 -- MAIN FARM LOOP
--- =====================================================task.spawn(function()
+-- =====================================================
+task.spawn(function()
     while true do
         task.wait(0.2)
         if not StartFarm then
