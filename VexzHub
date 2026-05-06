@@ -492,7 +492,7 @@ local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
 local noFallConn = nil
-local MyQuestAccepted = false -- FIX: Cờ đánh dấu đã nhận quest đúng
+local LastQuestLevel = 0 -- FIX: Lưu level lúc nhận quest để kiểm tra
 
 -- =====================================================
 -- TWEEN TO
@@ -643,16 +643,19 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- MAIN FARM LOOP (FIX: Không hủy quest đã nhận đúng)
+-- MAIN FARM LOOP (FIX: Logic level xịn hơn)
 -- =====================================================
 task.spawn(function()
     while true do
         task.wait(0.2)
         if not StartFarm then
             if CurrentMob then stopNoFall(); CurrentMob = nil end
-            MyQuestAccepted = false
+            LastQuestLevel = 0
             continue
         end
+
+        -- Lấy level hiện tại
+        local currentLevel = LP.Data.Level.Value
 
         pcall(function() QuestCheck() end)
         local qName = Qname; local qLevel = Qdata; local qPos = PosQ; local mPos = PosM; local mobName = Mon; local nameMon = NameMon
@@ -672,11 +675,17 @@ task.spawn(function()
             end
         end)
 
-        -- FIX: Chỉ abandon quest khi đã nhận quest đúng nhưng quest bị sai (level up)
-        if questVisible and questTitle ~= "" and MyQuestAccepted then
-            if not questTitle:find(nameMon) then
-                pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
-                task.wait(0.5); questVisible = false; MyQuestAccepted = false
+        -- FIX: Chỉ abandon quest khi level đã thay đổi so với lúc nhận quest
+        if questVisible and questTitle ~= "" and LastQuestLevel > 0 then
+            if currentLevel ~= LastQuestLevel then
+                -- Level đã thay đổi, kiểm tra quest có còn đúng không
+                if not questTitle:find(nameMon) then
+                    pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
+                    task.wait(0.5); questVisible = false; LastQuestLevel = 0
+                else
+                    -- Quest vẫn đúng, cập nhật level
+                    LastQuestLevel = currentLevel
+                end
             end
         end
 
@@ -685,19 +694,19 @@ task.spawn(function()
             tweenTo(qPos, 250); task.wait(0.5)
             pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel) end)
             task.wait(0.5)
-            MyQuestAccepted = true -- Đánh dấu đã nhận quest
+            LastQuestLevel = currentLevel -- Lưu level lúc nhận quest
             if mPos then tweenTo(mPos, 300); task.wait(0.3) end
             continue
         end
 
-        -- Có quest visible → đánh dấu đã nhận
-        MyQuestAccepted = true
+        -- Cập nhật level nếu quest vẫn hiện
+        if LastQuestLevel == 0 then LastQuestLevel = currentLevel end
 
         if CurrentMob then
             local mh = CurrentMob:FindFirstChildOfClass("Humanoid")
             if not CurrentMob.Parent or not mh or mh.Health <= 0 then
                 stopNoFall(); CurrentMob = nil
-                MyQuestAccepted = false -- Quest hoàn thành, reset để nhận quest mới
+                LastQuestLevel = 0 -- Quest hoàn thành
             end
         end
 
@@ -807,7 +816,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- TÌM FLUENT SCREENGUI (FIX: Chỉ toggle Fluent UI)
+-- TÌM FLUENT SCREENGUI
 -- =====================================================
 local FluentScreenGui = nil
 task.spawn(function()
@@ -846,7 +855,7 @@ ImageButton.Parent = FloatScreenGui
 
 local ButtonCorner = Instance.new("UICorner"); ButtonCorner.CornerRadius = UDim.new(1, 0); ButtonCorner.Parent = ImageButton
 
--- FIX: Chỉ toggle Fluent UI, không đụng game UI
+-- FIX: Chỉ toggle Fluent UI
 ImageButton.MouseButton1Click:Connect(function()
     if FluentScreenGui then
         FluentScreenGui.Enabled = not FluentScreenGui.Enabled
