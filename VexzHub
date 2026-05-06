@@ -1041,21 +1041,25 @@ local function GetNearestMob(TargetName)
     if not char then return nil end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
-    
+
     local Closest = nil
-    local Dist = math.huge
-    
-    for _, Mob in pairs(workspace.Enemies:GetChildren()) do
-        if Mob:IsA("Model") then
-            local hum = Mob:FindFirstChild("Humanoid")
-            local hrp = Mob:FindFirstChild("HumanoidRootPart")
-            if hum and hum.Health > 0 and hrp and Mob.Name == TargetName then
-                local d = (hrp.Position - root.Position).Magnitude
-                if d < Dist then
-                    Dist = d
-                    Closest = Mob
-                end
-            end
+    local Dist    = math.huge
+
+    -- Tìm trong workspace.Enemies, có pcall tránh crash
+    local Enemies = workspace:FindFirstChild("Enemies")
+    if not Enemies then return nil end
+
+    for _, Mob in pairs(Enemies:GetChildren()) do
+        if not Mob:IsA("Model") then continue end
+        local hum = Mob:FindFirstChildOfClass("Humanoid")
+        local hrp = Mob:FindFirstChild("HumanoidRootPart")
+        if not hum or hum.Health <= 0 or not hrp then continue end
+        -- Tìm theo tên chính xác hoặc tên chứa TargetName
+        if Mob.Name ~= TargetName and not Mob.Name:find(TargetName) then continue end
+        local d = (hrp.Position - root.Position).Magnitude
+        if d < Dist then
+            Dist    = d
+            Closest = Mob
         end
     end
     return Closest
@@ -1218,33 +1222,35 @@ local function getQuestState()
 end
 
 -- Nhận quest: bay đến NPC → StartQuest
-local function doAcceptQuest()
-    if not PosQ then return false end
+local function doAcceptQuest(qName, qLevel, qPos)
+    if not qPos then return false end
     local char = LP.Character
     if not char then return false end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return false end
 
-    print("[Farm] Bay nhận quest:", NameQuest)
-    flyTo(PosQ, 8)
+    print("[Farm] Bay nhận quest:", qName)
+    flyTo(qPos, 8)
     task.wait(0.3)
 
-    -- Kiểm tra đã đến gần NPC
-    if not root or not root.Parent then return false end
-    local dist = (root.Position - PosQ.Position).Magnitude
+    root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+
+    local dist = (root.Position - qPos.Position).Magnitude
     if dist > 30 then
-        print("[Farm] Chưa đến NPC, dist:", dist)
-        return false
+        print("[Farm] Chưa đến NPC, dist:", math.floor(dist))
+        -- Thử teleport thẳng nếu tween chưa đến
+        root.CFrame = qPos
+        task.wait(0.3)
     end
 
-    -- Nhận quest
     local ok = false
     pcall(function()
-        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", NameQuest, LevelQuest)
+        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel)
         ok = true
     end)
     task.wait(0.5)
-    print("[Farm] Nhận quest:", NameQuest, "| OK:", ok)
+    print("[Farm] Quest:", qName, "OK:", ok)
     return ok
 end
 
@@ -1265,7 +1271,26 @@ task.spawn(function()
 
         -- Lấy data quest cho level hiện tại
         pcall(function() CheckQuest() end)
-        if not Mon or not NameQuest then
+
+        -- Alias: CheckQuest() set Qname/Qdata/PosQ/PosM
+        -- Đồng bộ sang tên biến chuẩn
+        NameQuest  = NameQuest  or Qname
+        LevelQuest = LevelQuest or Qdata
+        Qname      = Qname      or NameQuest
+        Qdata      = Qdata      or LevelQuest
+        PosQ       = PosQ       or CFrameQuest
+        PosM       = PosM       or CFrameMon
+
+        if not Mon then
+            task.wait(1)
+            continue
+        end
+        -- Đảm bảo có đủ data quest
+        local questName  = Qname  or NameQuest
+        local questLevel = Qdata  or LevelQuest
+        local questPos   = PosQ   or CFrameQuest
+        local mobPos     = PosM   or CFrameMon
+        if not questName or not questPos then
             task.wait(1)
             continue
         end
@@ -1275,20 +1300,21 @@ task.spawn(function()
 
         -- Abandon quest sai mob
         if questVisible and questTitle ~= "" and NameMon then
-            if not string.find(questTitle, NameMon) then
+            if not string.find(questTitle, NameMon) and not string.find(questTitle, Mon) then
                 pcall(function()
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("AbandonQuest")
                 end)
                 task.wait(0.5)
                 questVisible = false
+                questTitle = ""
             end
         end
 
         -- Nhận quest nếu chưa có
         if not questVisible then
-            doAcceptQuest()
+            doAcceptQuest(questName, questLevel, questPos)
             task.wait(0.3)
-            continue  -- Vòng lặp tiếp sẽ check lại quest
+            continue
         end
 
         -- ─── BƯỚC 2: Tìm và bay đến mob ───
@@ -1307,7 +1333,7 @@ task.spawn(function()
 
         -- Không có mob → bay về vị trí mob mặc định
         if not CurrentMob then
-            if PosM then flyTo(PosM, 5) end
+            if mobPos then flyTo(mobPos, 5) end
             task.wait(0.5)
             continue
         end
