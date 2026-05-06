@@ -617,7 +617,7 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- BRING MOB
+-- BRING MOB (FIX TRIỆT ĐỂ)
 -- =====================================================
 task.spawn(function()
     while task.wait(0.3) do
@@ -627,6 +627,14 @@ task.spawn(function()
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
+            
+            local mobName = Mon
+            if not mobName then
+                pcall(function() QuestCheck() end)
+                mobName = Mon
+            end
+            if not mobName then return end
+            
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
@@ -637,10 +645,6 @@ task.spawn(function()
             if hasPlayer then return end
 
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
-
-            pcall(function() QuestCheck() end)
-            local mobName = Mon
-            if not mobName then return end
 
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
@@ -839,87 +843,81 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- TÌM FLUENT SCREENGUI
+-- FLOATING TOGGLE BUTTON (THÊM MỚI - KHÔNG CẮT BỎ GÌ)
 -- =====================================================
-local FluentScreenGui = nil
-task.spawn(function()
-    task.wait(1)
-    local pGui = LP:WaitForChild("PlayerGui")
-    for _, gui in ipairs(pGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            local hasContainer = false
-            for _, v in ipairs(gui:GetDescendants()) do
-                if v:IsA("Frame") and v.Name == "Container" then
-                    hasContainer = true
-                    break
-                end
+local screenGui = Instance.new("ScreenGui", game.CoreGui)
+screenGui.Name = "ControlGUI"
+
+local toggleButton = Instance.new("ImageButton", screenGui)
+toggleButton.Size = UDim2.new(0, 50, 0, 50)
+toggleButton.Position = UDim2.new(0.02, 0, 0.22, 0)
+toggleButton.Image = "rbxassetid://93384558628762"
+toggleButton.BackgroundTransparency = 1
+toggleButton.Active = true
+toggleButton.Draggable = false
+
+-- Bo tròn nút
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(1, 0)
+btnCorner.Parent = toggleButton
+
+-- Biến drag
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+-- Bắt đầu drag
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = toggleButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
             end
-            if hasContainer then
-                FluentScreenGui = gui
-                print("[Vexz Hub] Fluent ScreenGui found:", gui.Name)
-                break
-            end
-        end
+        end)
     end
 end)
 
--- =====================================================
--- FLOATING BUTTON
--- =====================================================
-local FloatScreenGui = Instance.new("ScreenGui")
-FloatScreenGui.Name = "VexzHub_FloatingButton"
-FloatScreenGui.Parent = LP:WaitForChild("PlayerGui")
-FloatScreenGui.ResetOnSpawn = false
-FloatScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-FloatScreenGui.DisplayOrder = 999
-
-local ImageButton = Instance.new("ImageButton")
-ImageButton.Size = UDim2.new(0, 50, 0, 50)
-ImageButton.Position = UDim2.new(0, 20, 0, 100)
-ImageButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-ImageButton.BorderSizePixel = 0
-ImageButton.Image = "rbxassetid://93384558628762"
-ImageButton.Parent = FloatScreenGui
-
-local ButtonCorner = Instance.new("UICorner"); ButtonCorner.CornerRadius = UDim.new(1, 0); ButtonCorner.Parent = ImageButton
-
-ImageButton.MouseButton1Click:Connect(function()
-    if FluentScreenGui then
-        FluentScreenGui.Enabled = not FluentScreenGui.Enabled
-    else
-        local pGui = LP:WaitForChild("PlayerGui")
-        for _, gui in ipairs(pGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui ~= FloatScreenGui then
-                for _, v in ipairs(gui:GetDescendants()) do
-                    if v:IsA("Frame") and v.Name == "Container" then
-                        FluentScreenGui = gui
-                        FluentScreenGui.Enabled = not FluentScreenGui.Enabled
-                        return
-                    end
-                end
-            end
-        end
+-- Lưu input di chuyển mới nhất
+toggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
 
-local dragging = false; local dragStart = nil; local startPos = nil
-ImageButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true; dragStart = input.Position; startPos = ImageButton.Position
-    end
-end)
+-- Track chuột toàn màn hình
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        ImageButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        toggleButton.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
     end
 end)
+
+-- Nhả chuột ở bất kỳ đâu
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- Click toggle Fluent UI
+toggleButton.MouseButton1Click:Connect(function()
+    Window:Minimize()
 end)
 
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Fast Attack: ON | Auto Quest: Ready | Bring Mob: Ready | Floating Button: Goc trai") 
- 
+print("[Vexz Hub] Loaded! Fast Attack: ON | Auto Quest: Ready | Bring Mob: Ready | Floating Button: Added") 
