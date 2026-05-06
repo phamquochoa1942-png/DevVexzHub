@@ -64,7 +64,10 @@ if Register_Hit then
             return old(self, ...)
         end)
         setreadonly(mt, true)
+        print("[Fast Attack] Hooked RE/RegisterHit, HASH:", HASH)
     end)
+else
+    print("[Fast Attack] WARNING: RE/RegisterHit not found, using default HASH")
 end
 
 local function GetAllBladeHits()
@@ -97,7 +100,9 @@ local function FastAttack()
         if not args[1] then args[1] = v:FindFirstChild("Head") or v:FindFirstChild("HumanoidRootPart") end
         args[2][r] = {[1] = v, [2] = v:FindFirstChild("HumanoidRootPart")}
     end
-    if Register_Hit then Register_Hit:FireServer(unpack(args)) end
+    if Register_Hit then
+        Register_Hit:FireServer(unpack(args))
+    end
 end
 
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait() end end)
@@ -492,7 +497,7 @@ local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
 local noFallConn = nil
-local LastQuestLevel = 0 -- FIX: Lưu level lúc nhận quest để kiểm tra
+local LastQuestLevel = 0
 
 -- =====================================================
 -- TWEEN TO
@@ -643,9 +648,8 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- MAIN FARM LOOP (FIX: Logic level xịn hơn)
--- =====================================================
-task.spawn(function()
+-- MAIN FARM LOOP
+-- =====================================================task.spawn(function()
     while true do
         task.wait(0.2)
         if not StartFarm then
@@ -654,7 +658,6 @@ task.spawn(function()
             continue
         end
 
-        -- Lấy level hiện tại
         local currentLevel = LP.Data.Level.Value
 
         pcall(function() QuestCheck() end)
@@ -675,38 +678,33 @@ task.spawn(function()
             end
         end)
 
-        -- FIX: Chỉ abandon quest khi level đã thay đổi so với lúc nhận quest
         if questVisible and questTitle ~= "" and LastQuestLevel > 0 then
             if currentLevel ~= LastQuestLevel then
-                -- Level đã thay đổi, kiểm tra quest có còn đúng không
                 if not questTitle:find(nameMon) then
                     pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
                     task.wait(0.5); questVisible = false; LastQuestLevel = 0
                 else
-                    -- Quest vẫn đúng, cập nhật level
                     LastQuestLevel = currentLevel
                 end
             end
         end
 
-        -- Nhận quest nếu chưa có
         if not questVisible then
             tweenTo(qPos, 250); task.wait(0.5)
             pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel) end)
             task.wait(0.5)
-            LastQuestLevel = currentLevel -- Lưu level lúc nhận quest
+            LastQuestLevel = currentLevel
             if mPos then tweenTo(mPos, 300); task.wait(0.3) end
             continue
         end
 
-        -- Cập nhật level nếu quest vẫn hiện
         if LastQuestLevel == 0 then LastQuestLevel = currentLevel end
 
         if CurrentMob then
             local mh = CurrentMob:FindFirstChildOfClass("Humanoid")
             if not CurrentMob.Parent or not mh or mh.Health <= 0 then
                 stopNoFall(); CurrentMob = nil
-                LastQuestLevel = 0 -- Quest hoàn thành
+                LastQuestLevel = 0
             end
         end
 
@@ -824,19 +822,24 @@ task.spawn(function()
     local pGui = LP:WaitForChild("PlayerGui")
     for _, gui in ipairs(pGui:GetChildren()) do
         if gui:IsA("ScreenGui") then
+            local hasContainer = false
             for _, v in ipairs(gui:GetDescendants()) do
                 if v:IsA("Frame") and v.Name == "Container" then
-                    FluentScreenGui = gui
+                    hasContainer = true
                     break
                 end
             end
-            if FluentScreenGui then break end
+            if hasContainer then
+                FluentScreenGui = gui
+                print("[Vexz Hub] Fluent ScreenGui found:", gui.Name)
+                break
+            end
         end
     end
 end)
 
 -- =====================================================
--- FLOATING BUTTON (FIX: Chỉ toggle Fluent UI)
+-- FLOATING BUTTON
 -- =====================================================
 local FloatScreenGui = Instance.new("ScreenGui")
 FloatScreenGui.Name = "VexzHub_FloatingButton"
@@ -855,10 +858,22 @@ ImageButton.Parent = FloatScreenGui
 
 local ButtonCorner = Instance.new("UICorner"); ButtonCorner.CornerRadius = UDim.new(1, 0); ButtonCorner.Parent = ImageButton
 
--- FIX: Chỉ toggle Fluent UI
 ImageButton.MouseButton1Click:Connect(function()
     if FluentScreenGui then
         FluentScreenGui.Enabled = not FluentScreenGui.Enabled
+    else
+        local pGui = LP:WaitForChild("PlayerGui")
+        for _, gui in ipairs(pGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui ~= FloatScreenGui then
+                for _, v in ipairs(gui:GetDescendants()) do
+                    if v:IsA("Frame") and v.Name == "Container" then
+                        FluentScreenGui = gui
+                        FluentScreenGui.Enabled = not FluentScreenGui.Enabled
+                        return
+                    end
+                end
+            end
+        end
     end
 end)
 
