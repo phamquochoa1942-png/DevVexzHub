@@ -157,7 +157,35 @@ end)
 print("[Vexz Hub] Auto Stats ready")
 
 -- =====================================================
--- M1 KITSUNE FRUIT - 360° AOE MƯỢT (THÊM MỚI)
+-- AUTO RANDOM FRUIT (THÊM MỚI)
+-- =====================================================
+local AutoRandomFruitEnabled = false
+
+local function randomFruitFunction()
+    if not AutoRandomFruitEnabled then return end
+    
+    pcall(function()
+        local args = {
+            [1] = "Cousin",
+            [2] = "Buy"
+        }
+        
+        ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args))
+    end)
+end
+
+-- Auto Random Fruit loop (đợi 2.5s giữa các lần để tránh spam)
+task.spawn(function()
+    while task.wait(2.5) do
+        if AutoRandomFruitEnabled then
+            pcall(randomFruitFunction)
+        end
+    end
+end)
+print("[Vexz Hub] Auto Random Fruit ready")
+
+-- =====================================================
+-- M1 KITSUNE FRUIT - 360° AOE MƯỢT (FIX LAG)
 -- =====================================================
 _G.KitsuneM1 = true
 
@@ -233,7 +261,6 @@ task.spawn(function()
         task.wait(0.02) -- 50 lần/giây (giảm tải)
     end
 end)
-
 print("[Kitsune M1] ON | 360° AOE | Fix Lag")
 
 -- =====================================================
@@ -305,7 +332,7 @@ end
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait(0.05) end end)
 
 -- =====================================================
--- ORIGINAL QUEST DATA (FIX: Level 1-9 Bandit)
+-- ORIGINAL QUEST DATA (FIX: Level 1-9 Bandit + SEA 3)
 -- =====================================================
 QuestCheck = function()
     local I = game.Players.LocalPlayer.Data.Level.Value
@@ -512,171 +539,178 @@ QuestCheck = function()
     elseif World3 then
         if I == 1500 or I <= 1524 then
             Mon = "Pirate Millionaire"; Qdata = 1; Qname = "PiratePortQuest"; NameMon = "Pirate Millionaire"
-            PosQ = CFrame.new(-290.07, 42.90, 5581.59); PosM = CFrame.new(-246.00, 47.31, 5584.10)
+            PosQ = CFrame.new(-290.0749816894531, 42.90361022949219, 5581.58984375)
+            PosM = CFrame.new(-245.26913452148438, 47.33905029296875, 5589.89111328125)
         elseif I == 1525 or I <= 1574 then
             Mon = "Pistol Billionaire"; Qdata = 2; Qname = "PiratePortQuest"; NameMon = "Pistol Billionaire"
-            PosQ = CFrame.new(-290.07, 42.90, 5581.59); PosM = CFrame.new(-187.33, 86.24, 6013.51)
+            PosQ = CFrame.new(-290.0749816894531, 42.90361022949219, 5581.58984375)
+            PosM = CFrame.new(-187.3300018310547, 86.23999786376953, 6013.509765625)
         elseif I == 1575 or I <= 1599 then
             Mon = "Dragon Crew Warrior"; Qdata = 1; Qname = "DragonCrewQuest"; NameMon = "Dragon Crew Warrior"
-            PosQ = CFrame.new(6737.06055,127.417763,-712.300659,-0.463954359,-7.19574755e-09,0.885859072,7.69187665e-08,1,4.84078626e-08,-0.885859072,9.05982276e-08,-0.463954359)
-            PosM = CFrame.new(6709.76367,52.3442993,-1139.02966,-0.763515472,0,0.645789504,0,1,0,-0.645789504,0,-0.763515472)
+            PosQ = CFrame.new(6737.060546875, 127.41776275634766, -712.3006591796875)
+            PosM = CFrame.new(6709.763671875, 52.34429931640625, -1139.0296630859375)
         elseif I == 1600 or I <= 1624 then
             Mon = "Dragon Crew Archer"; Qdata = 2; Qname = "DragonCrewQuest"; NameMon = "Dragon Crew Archer"
-            PosQ = CFrame.new(6737.06055,127.417763,-712.300659,-0.463954359,-7.19574755e-09,0.885859072,7.69187665e-08,1,4.84078626e-08,-0.885859072,9.05982276e-08,-0.463954359)
-            PosM = CFrame.new(6668.76172,481.376923,329.12207,-0.121787429,0,-0.992556155,0,1,0,0.992556155,0,-0.121787429)
+            PosQ = CFrame.new(6737.060546875, 127.41776275634766, -712.3006591796875)
+            PosM = CFrame.new(6668.76171875, 481.3769226074219, 329.1220703125)
         elseif I == 1625 or I <= 1649 then
             Mon = "Hydra Enforcer"; Qname = "VenomCrewQuest"; Qdata = 1; NameMon = "Hydra Enforcer"
             PosQ = CFrame.new(5206.40185546875, 1004.10498046875, 748.3504638671875)
-            PosM = CFrame.new(4547.11523, 1003.10217, 334.194824, 0.388810456, -0, -0.921317935, 0, 1, -0, 0.921317935, 0, 0.388810456)
+            PosM = CFrame.new(4547.115234375, 1003.1021728515625, 334.19482421875)
         elseif I == 1650 or I <= 1699 then
             Mon = "Venomous Assailant"; Qname = "VenomCrewQuest"; Qdata = 2; NameMon = "Venomous Assailant"
             PosQ = CFrame.new(5206.40185546875, 1004.10498046875, 748.3504638671875)
-            PosM = CFrame.new(4674.92676, 1134.82654, 996.308838, 0.731321394, -0, -0.682033002, 0, 1, -0, 0.682033002, 0, 0.731321394)
+            PosM = CFrame.new(4674.9267578125, 1134.8265380859375, 996.308837890625)
         elseif I == 1700 or I <= 1724 then
             Mon = "Marine Commodore"; Qdata = 1; Qname = "MarineTreeIsland"; NameMon = "Marine Commodore"
-            PosQ = CFrame.new(2180.54126, 27.8156815, -6741.5498, -0.965929747, 0, .258804798, 0, 1, 0, -0.258804798, 0, -0.965929747)
-            PosM = CFrame.new(2286.0078125, 73.133918762207, -7159.8090820312)
+            PosQ = CFrame.new(2180.541259765625, 27.81568145751953, -6741.5498046875)
+            PosM = CFrame.new(2286.0078125, 73.13391876220703, -7159.80908203125)
         elseif I == 1725 or I <= 1774 then
             Mon = "Marine Rear Admiral"; NameMon = "Marine Rear Admiral"; Qname = "MarineTreeIsland"; Qdata = 2
-            PosQ = CFrame.new(2179.98828125, 28.731239318848, -6740.0551757813)
-            PosM = CFrame.new(3656.7736816406, 160.52406311035, -7001.5986328125)
+            PosQ = CFrame.new(2179.98828125, 28.731239318847656, -6740.05517578125)
+            PosM = CFrame.new(3656.773681640625, 160.52406311035156, -7001.5986328125)
         elseif I == 1775 or I <= 1799 then
             Mon = "Fishman Raider"; Qdata = 1; Qname = "DeepForestIsland3"; NameMon = "Fishman Raider"
-            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652, -0.882952213, 0, .469463557, 0, 1, 0, -0.469463557, 0, -0.882952213)
-            PosM = CFrame.new(-10407.526367188, 331.76263427734, -8368.5166015625)
+            PosQ = CFrame.new(-10581.65625, 330.8729553222656, -8761.1865234375)
+            PosM = CFrame.new(-10407.5263671875, 331.76263427734375, -8368.5166015625)
         elseif I == 1800 or I <= 1824 then
             Mon = "Fishman Captain"; Qdata = 2; Qname = "DeepForestIsland3"; NameMon = "Fishman Captain"
-            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652, -0.882952213, 0, .469463557, 0, 1, 0, -0.469463557, 0, -0.882952213)
-            PosM = CFrame.new(-10994.701171875, 352.38140869141, -9002.1103515625)
+            PosQ = CFrame.new(-10581.65625, 330.8729553222656, -8761.1865234375)
+            PosM = CFrame.new(-10994.701171875, 352.38140869140625, -9002.1103515625)
         elseif I == 1825 or I <= 1849 then
             Mon = "Forest Pirate"; Qdata = 1; Qname = "DeepForestIsland"; NameMon = "Forest Pirate"
-            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137, .707134247, 0, -0.707079291, 0, 1, 0, .707079291, 0, .707134247)
-            PosM = CFrame.new(-13274.478515625, 332.37814331055, -7769.5805664062)
+            PosQ = CFrame.new(-13234.0400390625, 331.4884948730469, -7625.4013671875)
+            PosM = CFrame.new(-13274.478515625, 332.3781433105469, -7769.58056640625)
         elseif I == 1850 or I <= 1899 then
             Mon = "Mythological Pirate"; Qdata = 2; Qname = "DeepForestIsland"; NameMon = "Mythological Pirate"
-            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137, .707134247, 0, -0.707079291, 0, 1, 0, .707079291, 0, .707134247)
+            PosQ = CFrame.new(-13234.0400390625, 331.4884948730469, -7625.4013671875)
             PosM = CFrame.new(-13680.607421875, 501.08154296875, -6991.189453125)
         elseif I == 1900 or I <= 1924 then
             Mon = "Jungle Pirate"; Qdata = 1; Qname = "DeepForestIsland2"; NameMon = "Jungle Pirate"
-            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953, -0.0871315002, 0, .996196866, 0, 1, 0, -0.996196866, 0, -0.0871315002)
-            PosM = CFrame.new(-12256.16015625, 331.73828125, -10485.836914062)
+            PosQ = CFrame.new(-12680.3818359375, 389.9710388183594, -9902.01953125)
+            PosM = CFrame.new(-12256.16015625, 331.73828125, -10485.8369140625)
         elseif I == 1925 or I <= 1974 then
             Mon = "Musketeer Pirate"; Qdata = 2; Qname = "DeepForestIsland2"; NameMon = "Musketeer Pirate"
-            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953, -0.0871315002, 0, .996196866, 0, 1, 0, -0.996196866, 0, -0.0871315002)
-            PosM = CFrame.new(-13457.904296875, 391.54565429688, -9859.177734375)
+            PosQ = CFrame.new(-12680.3818359375, 389.9710388183594, -9902.01953125)
+            PosM = CFrame.new(-13457.904296875, 391.545654296875, -9859.177734375)
         elseif I == 1975 or I <= 1999 then
             Mon = "Reborn Skeleton"; Qdata = 1; Qname = "HauntedQuest1"; NameMon = "Reborn Skeleton"
-            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277, 0, 0, 1, 0, 1, 0, -1, 0, 0)
-            PosM = CFrame.new(-8763.7236328125, 165.72299194336, 6159.8618164062)
+            PosQ = CFrame.new(-9479.216796875, 141.215087890625, 5566.0927734375)
+            PosM = CFrame.new(-8763.7236328125, 165.72299194335938, 6159.86181640625)
         elseif I == 2000 or I <= 2024 then
             Mon = "Living Zombie"; Qdata = 2; Qname = "HauntedQuest1"; NameMon = "Living Zombie"
-            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277, 0, 0, 1, 0, 1, 0, -1, 0, 0)
-            PosM = CFrame.new(-10144.131835938, 138.6266784668, 5838.0888671875)
+            PosQ = CFrame.new(-9479.216796875, 141.215087890625, 5566.0927734375)
+            PosM = CFrame.new(-10144.1318359375, 138.62667846679688, 5838.0888671875)
         elseif I == 2025 or I <= 2049 then
             Mon = "Demonic Soul"; Qdata = 1; Qname = "HauntedQuest2"; NameMon = "Demonic Soul"
-            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-9505.8720703125, 172.10482788086, 6158.9931640625)
+            PosQ = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
+            PosM = CFrame.new(-9505.8720703125, 172.10482788085938, 6158.9931640625)
         elseif I == 2050 or I <= 2074 then
             Mon = "Posessed Mummy"; Qdata = 2; Qname = "HauntedQuest2"; NameMon = "Posessed Mummy"
-            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-9582.0224609375, 6.2515273094177, 6205.478515625)
+            PosQ = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
+            PosM = CFrame.new(-9582.0224609375, 6.251527309417725, 6205.478515625)
         elseif I == 2075 or I <= 2099 then
             Mon = "Peanut Scout"; Qdata = 1; Qname = "NutsIslandQuest"; NameMon = "Peanut Scout"
-            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-2143.2419433594, 47.721984863281, -10029.995117188)
+            PosQ = CFrame.new(-2104.390869140625, 38.10416793823242, -10194.21875)
+            PosM = CFrame.new(-2143.241943359375, 47.72198486328125, -10029.9951171875)
         elseif I == 2100 or I <= 2124 then
             Mon = "Peanut President"; Qdata = 2; Qname = "NutsIslandQuest"; NameMon = "Peanut President"
-            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-1859.3540039062, 38.103168487549, -10422.4296875)
+            PosQ = CFrame.new(-2104.390869140625, 38.10416793823242, -10194.21875)
+            PosM = CFrame.new(-1859.35400390625, 38.10316848754883, -10422.4296875)
         elseif I == 2125 or I <= 2149 then
             Mon = "Ice Cream Chef"; Qdata = 1; Qname = "IceCreamIslandQuest"; NameMon = "Ice Cream Chef"
-            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-872.24658203125, 65.81957244873, -10919.95703125)
+            PosQ = CFrame.new(-820.6482543945312, 65.81952667236328, -10965.7958984375)
+            PosM = CFrame.new(-872.24658203125, 65.81957244873047, -10919.95703125)
         elseif I == 2150 or I <= 2199 then
             Mon = "Ice Cream Commander"; Qdata = 2; Qname = "IceCreamIslandQuest"; NameMon = "Ice Cream Commander"
-            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438, 0, 0, -1, 0, 1, 0, 1, 0, 0)
-            PosM = CFrame.new(-558.06103515625, 112.04895782471, -11290.774414062)
+            PosQ = CFrame.new(-820.6482543945312, 65.81952667236328, -10965.7958984375)
+            PosM = CFrame.new(-558.06103515625, 112.04895782470703, -11290.7744140625)
         elseif I == 2200 or I <= 2224 then
             Mon = "Cookie Crafter"; Qdata = 1; Qname = "CakeQuest1"; NameMon = "Cookie Crafter"
-            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295, .957576931, -8.80302053e-08, .288177818, 6.9301187e-08, 1, 7.51931211e-08, -0.288177818, -5.2032135e-08, .957576931)
-            PosM = CFrame.new(-2374.13671875, 37.798263549805, -12125.30859375)
+            PosQ = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+            PosM = CFrame.new(-2374.13671875, 37.79826354980469, -12125.30859375)
         elseif I == 2225 or I <= 2249 then
             Mon = "Cake Guard"; Qdata = 2; Qname = "CakeQuest1"; NameMon = "Cake Guard"
-            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295, .957576931, -8.80302053e-08, .288177818, 6.9301187e-08, 1, 7.51931211e-08, -0.288177818, -5.2032135e-08, .957576931)
-            PosM = CFrame.new(-1598.3070068359, 43.773197174072, -12244.581054688)
+            PosQ = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+            PosM = CFrame.new(-1598.3070068359375, 43.773197174072266, -12244.5810546875)
         elseif I == 2250 or I <= 2274 then
             Mon = "Baking Staff"; Qdata = 1; Qname = "CakeQuest2"; NameMon = "Baking Staff"
-            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391, -0.96804446, 4.22142143e-08, .250778586, 4.74911062e-08, 1, 1.49904711e-08, -0.250778586, 2.64211941e-08, -0.96804446)
-            PosM = CFrame.new(-1887.8099365234, 77.618507385254, -12998.350585938)
+            PosQ = CFrame.new(-1927.916015625, 37.798133850097656, -12842.5390625)
+            PosM = CFrame.new(-1887.8099365234375, 77.6185073852539, -12998.3505859375)
         elseif I == 2275 or I <= 2299 then
             Mon = "Head Baker"; Qdata = 2; Qname = "CakeQuest2"; NameMon = "Head Baker"
-            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391, -0.96804446, 4.22142143e-08, .250778586, 4.74911062e-08, 1, 1.49904711e-08, -0.250778586, 2.64211941e-08, -0.96804446)
-            PosM = CFrame.new(-2216.1882324219, 82.884521484375, -12869.293945312)
+            PosQ = CFrame.new(-1927.916015625, 37.798133850097656, -12842.5390625)
+            PosM = CFrame.new(-2216.188232421875, 82.884521484375, -12869.2939453125)
         elseif I == 2300 or I <= 2324 then
             Mon = "Cocoa Warrior"; Qdata = 1; Qname = "ChocQuest1"; NameMon = "Cocoa Warrior"
-            PosQ = CFrame.new(233.22836303711, 29.876001358032, -12201.233398438)
-            PosM = CFrame.new(-21.553283691406, 80.574996948242, -12352.387695312)
+            PosQ = CFrame.new(233.22836303710938, 29.876001358032227, -12201.2333984375)
+            PosM = CFrame.new(-21.55328369140625, 80.57499694824219, -12352.3876953125)
         elseif I == 2325 or I <= 2349 then
             Mon = "Chocolate Bar Battler"; Qdata = 2; Qname = "ChocQuest1"; NameMon = "Chocolate Bar Battler"
-            PosQ = CFrame.new(233.22836303711, 29.876001358032, -12201.233398438)
-            PosM = CFrame.new(582.59057617188, 77.188095092773, -12463.162109375)
+            PosQ = CFrame.new(233.22836303710938, 29.876001358032227, -12201.2333984375)
+            PosM = CFrame.new(582.590576171875, 77.18809509277344, -12463.162109375)
         elseif I == 2350 or I <= 2374 then
             Mon = "Sweet Thief"; Qdata = 1; Qname = "ChocQuest2"; NameMon = "Sweet Thief"
-            PosQ = CFrame.new(150.50663757324, 30.693693161011, -12774.502929688)
-            PosM = CFrame.new(165.1884765625, 76.058853149414, -12600.836914062)
+            PosQ = CFrame.new(150.5066375732422, 30.693693161010742, -12774.5029296875)
+            PosM = CFrame.new(165.1884765625, 76.05885314941406, -12600.8369140625)
         elseif I == 2375 or I <= 2399 then
             Mon = "Candy Rebel"; Qdata = 2; Qname = "ChocQuest2"; NameMon = "Candy Rebel"
-            PosQ = CFrame.new(150.50663757324, 30.693693161011, -12774.502929688)
-            PosM = CFrame.new(134.86563110352, 77.247680664062, -12876.547851562)
+            PosQ = CFrame.new(150.5066375732422, 30.693693161010742, -12774.5029296875)
+            PosM = CFrame.new(134.86563110351562, 77.2476806640625, -12876.5478515625)
         elseif I == 2400 or I <= 2449 then
             Mon = "Candy Pirate"; Qdata = 1; Qname = "CandyQuest1"; NameMon = "Candy Pirate"
-            PosQ = CFrame.new(-1150.0400390625, 20.378934860229, -14446.334960938)
-            PosM = CFrame.new(-1310.5003662109, 26.016523361206, -14562.404296875)
+            PosQ = CFrame.new(-1150.0400390625, 20.378934860229492, -14446.3349609375)
+            PosM = CFrame.new(-1310.5003662109375, 26.016523361206055, -14562.404296875)
         elseif I == 2450 or I <= 2474 then
             Mon = "Isle Outlaw"; Qdata = 1; Qname = "TikiQuest1"; NameMon = "Isle Outlaw"
-            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125, .213092566, 0, -0.977032006, 0, 1, 0, .977032006, 0, .213092566)
-            PosM = CFrame.new(-16479.900390625, 226.6117401123, -300.31143188477)
+            PosQ = CFrame.new(-16548.81640625, 55.60599136352539, -172.8125)
+            PosM = CFrame.new(-16479.900390625, 226.6117401123047, -300.3114318847656)
         elseif I == 2475 or I <= 2499 then
             Mon = "Island Boy"; Qdata = 2; Qname = "TikiQuest1"; NameMon = "Island Boy"
-            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125, .213092566, 0, -0.977032006, 0, 1, 0, .977032006, 0, .213092566)
-            PosM = CFrame.new(-16849.396484375, 192.86505126953, -150.78532409668)
+            PosQ = CFrame.new(-16548.81640625, 55.60599136352539, -172.8125)
+            PosM = CFrame.new(-16849.396484375, 192.86505126953125, -150.7853240966797)
         elseif I == 2500 or I <= 2524 then
-            Mon = "Sun-kissed Warrior"; Qdata = 1; Qname = "TikiQuest2"; NameMon = "kissed Warrior"
-            PosM = CFrame.new(-16347, 64, 984); PosQ = CFrame.new(-16538, 55, 1049)
+            Mon = "Sun-kissed Warrior"; Qdata = 1; Qname = "TikiQuest2"; NameMon = "Sun-kissed Warrior"
+            PosQ = CFrame.new(-16538.021484375, 55.60599136352539, 1049.461181640625)
+            PosM = CFrame.new(-16347.0, 64.0, 984.0)
         elseif I == 2525 or I <= 2550 then
             Mon = "Isle Champion"; Qdata = 2; Qname = "TikiQuest2"; NameMon = "Isle Champion"
-            PosQ = CFrame.new(-16541.0215, 57.3082275, 1051.46118, .0410757065, 0, -0.999156058, 0, 1, 0, .999156058, 0, .0410757065)
-            PosM = CFrame.new(-16602.1015625, 130.38734436035, 1087.2456054688)
+            PosQ = CFrame.new(-16541.021484375, 57.3082275390625, 1051.461181640625)
+            PosM = CFrame.new(-16602.1015625, 130.38734436035156, 1087.24560546875)
         elseif I == 2551 or I <= 2574 then
             Mon = "Serpent Hunter"; Qdata = 1; Qname = "TikiQuest3"; NameMon = "Serpent Hunter"
-            PosQ = CFrame.new(-16668.03,105.32,1568.60); PosM = CFrame.new(-16645.64,163.09,1352.87)
+            PosQ = CFrame.new(-16668.029296875, 105.31999969482422, 1568.5999755859375)
+            PosM = CFrame.new(-16645.640625, 163.08999633789062, 1352.8699951171875)
         elseif I >= 2575 and I <= 2599 then
             Mon = "Skull Slayer"; Qdata = 2; Qname = "TikiQuest3"; NameMon = "Skull Slayer"
-            PosQ = CFrame.new(-16668.03,105.32,1568.60); PosM = CFrame.new(-16709.49,419.68,1751.09)
-        elseif I >= 2600 and I <= 2624 then
-            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
-            Mon = "Reef Bandit"; Qdata = 1; Qname = "SubmergedQuest1"; NameMon = "Reef Bandit"
-            PosM = CFrame.new(11019.1318, -2146.06812, 9342.3916, -0.719955266, -1.74275385e-08, 0.69402045, 5.76556367e-08, 1, 8.49211546e-08, -0.69402045, 1.01153624e-07, -0.719955266)
-        elseif I >= 2625 and I <= 2649 then
-            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
-            Mon = "Coral Pirate"; Qdata = 2; Qname = "SubmergedQuest1"; NameMon = "Coral Pirate"
-            PosM = CFrame.new(10808.6006, -2030.36145, 9364.2334, -0.775185347, -0.0359364748, 0.6307109, 0.0615428537, 0.989336014, 0.132010356, -0.628728986, 0.141148239, -0.764707148)
-        elseif I >= 2650 and I <= 2674 then
-            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
-            Mon = "Sea Chanter"; Qdata = 1; Qname = "SubmergedQuest2"; NameMon = "Sea Chanter"
-            PosM = CFrame.new(10671.2715, -2057.59155, 10047.2588, -0.846484065, -3.11045447e-08, 0.532414079, -5.55383117e-08, 1, -2.98785316e-08, -0.532414079, -5.48610757e-08, -0.846484065)
-        elseif I >= 2675 and I <= 2699 then
-            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
-            Mon = "Ocean Prophet"; Qdata = 2; Qname = "SubmergedQuest2"; NameMon = "Ocean Prophet"
-            PosM = CFrame.new(11008.5195, -2007.72839, 10223.0791, -0.688615739, 2.33523378e-09, -0.725126445, 2.99292546e-09, 1, 3.78221315e-10, 0.725126445, -1.90980032e-09, -0.688615739)
-        elseif I >= 2700 and I <= 2724 then
-            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
-            Mon = "High Disciple"; Qdata = 1; Qname = "SubmergedQuest3"; NameMon = "High Disciple"
-            PosM = CFrame.new(9750.41602, -1966.93884, 9753.36035, -0.749824047, 5.57797613e-08, -0.661637306, 2.03500754e-08, 1, 6.1243199e-08, 0.661637306, 3.24572511e-08, -0.749824047)
-        elseif I >= 2725 then
-            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
-            Mon = "Grand Devotee"; Qdata = 2; Qname = "SubmergedQuest3"; NameMon = "Grand Devotee"
-            PosM = CFrame.new(9611.70508, -1993.47119, 9882.68848, -0.591375351, 4.14332426e-08, -0.806396425, 4.73774868e-08, 1, 1.66361875e-08, 0.806396425, -2.83668058e-08, -0.591375351)
+            PosQ = CFrame.new(-16668.029296875, 105.31999969482422, 1568.5999755859375)
+            PosM = CFrame.new(-16709.490234375, 419.67999267578125, 1751.0899658203125)
+        elseif I >= 2600 then
+            -- Submerged quests (dưới nước)
+            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359)
+            if I <= 2624 then
+                Mon = "Reef Bandit"; Qdata = 1; Qname = "SubmergedQuest1"; NameMon = "Reef Bandit"
+                PosM = CFrame.new(11019.1318, -2146.06812, 9342.3916)
+            elseif I <= 2649 then
+                Mon = "Coral Pirate"; Qdata = 2; Qname = "SubmergedQuest1"; NameMon = "Coral Pirate"
+                PosM = CFrame.new(10808.6006, -2030.36145, 9364.2334)
+            elseif I <= 2674 then
+                PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624)
+                Mon = "Sea Chanter"; Qdata = 1; Qname = "SubmergedQuest2"; NameMon = "Sea Chanter"
+                PosM = CFrame.new(10671.2715, -2057.59155, 10047.2588)
+            elseif I <= 2699 then
+                PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624)
+                Mon = "Ocean Prophet"; Qdata = 2; Qname = "SubmergedQuest2"; NameMon = "Ocean Prophet"
+                PosM = CFrame.new(11008.5195, -2007.72839, 10223.0791)
+            elseif I <= 2724 then
+                PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234)
+                Mon = "High Disciple"; Qdata = 1; Qname = "SubmergedQuest3"; NameMon = "High Disciple"
+                PosM = CFrame.new(9750.41602, -1966.93884, 9753.36035)
+            else
+                PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234)
+                Mon = "Grand Devotee"; Qdata = 2; Qname = "SubmergedQuest3"; NameMon = "Grand Devotee"
+                PosM = CFrame.new(9611.70508, -1993.47119, 9882.68848)
+            end
         end
     end
 end
@@ -703,8 +737,9 @@ local function tweenTo(targetCF, speed)
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
     workspace.Gravity = 0
-    if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; hum.PlatformStand = true; hum.AutoRotate = false end
+    hum.WalkSpeed = 0; hum.JumpPower = 0; hum.PlatformStand = true; hum.AutoRotate = false
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
     end
@@ -864,7 +899,11 @@ task.spawn(function()
 
         pcall(function() QuestCheck() end)
         local qName = Qname; local qLevel = Qdata; local qPos = PosQ; local mPos = PosM; local mobName = Mon; local nameMon = NameMon
-        if not qName or not qPos or not mobName then task.wait(1); continue end
+        if not qName or not qPos or not mobName then 
+            print("[Vexz Hub] WARNING: Quest data not found for level " .. currentLevel)
+            task.wait(1)
+            continue 
+        end
 
         local questVisible, questTitle = false, ""
         pcall(function()
@@ -952,7 +991,8 @@ local Window = Fluent:CreateWindow({
 local Tabs = {
     Farm   = Window:AddTab({ Title = "Farm",   Icon = "swords" }),
     Mob    = Window:AddTab({ Title = "Mob",    Icon = "zap" }),
-    LocalPlayer = Window:AddTab({ Title = "LocalPlayer", Icon = "user" }), -- THÊM MỚI
+    Fruit  = Window:AddTab({ Title = "Fruit & Dungeon", Icon = "cherry" }),
+    LocalPlayer = Window:AddTab({ Title = "LocalPlayer", Icon = "user" }),
     Misc   = Window:AddTab({ Title = "Misc",   Icon = "settings" }),
 }
 
@@ -989,7 +1029,35 @@ Tabs.Mob:AddSlider("BringCount", {
 }):OnChanged(function(v) MaxBringCount = v end)
 
 -- =====================================================
--- TAB LOCALPLAYER (THÊM MỚI - AUTO STATS)
+-- TAB FRUIT & DUNGEON
+-- =====================================================
+Tabs.Fruit:AddSection("Auto Random Fruit")
+Tabs.Fruit:AddParagraph({
+    Title = "Thông tin",
+    Content = "Tự động random trái ác quỷ tại NPC Cousin (Cần đứng gần NPC)"
+})
+
+Tabs.Fruit:AddToggle("AutoRandomFruit", {
+    Title       = "Auto Random Fruit",
+    Description = "Tự động mua random fruit (2.5s/lần)",
+    Default     = false,
+}):OnChanged(function(v) 
+    AutoRandomFruitEnabled = v 
+    if v then
+        print("[Vexz Hub] Auto Random Fruit: ON")
+    else
+        print("[Vexz Hub] Auto Random Fruit: OFF")
+    end
+end)
+
+Tabs.Fruit:AddSection("Hướng dẫn")
+Tabs.Fruit:AddParagraph({
+    Title = "Lưu ý",
+    Content = "1. Đứng gần NPC Cousin (Fruit Dealer)\n2. Bật Auto Random Fruit\n3. Script sẽ tự động mua fruit mỗi 2.5 giây\n4. Có thể sử dụng cùng lúc với Auto Farm"
+})
+
+-- =====================================================
+-- TAB LOCALPLAYER (AUTO STATS)
 -- =====================================================
 Tabs.LocalPlayer:AddSection("Auto Stats")
 Tabs.LocalPlayer:AddParagraph({
@@ -1024,10 +1092,9 @@ end)
 Tabs.LocalPlayer:AddSection("Thông tin chỉ số")
 Tabs.LocalPlayer:AddParagraph({
     Title = "Hướng dẫn",
-    Content = "Melee: Tăng sát thương đánh tay\nDefense: Tăng máu\nSword: Tăng sát thương kiếm\nGun: Tăng sát thương súng\nBlox Fruit: Tăng sát thương trái ác quỷ"
-})
-
--- =====================================================
+    Content = "Melee: Tăng sát thương đánh tay\nDefense: Tăng máu\nSword: Tăng sát thương kiếm\nGun: Tăng sát thương súng\nBlox Fruit: Tăng sát
+  })
+  -- =====================================================
 -- TAB MISC
 -- =====================================================
 Tabs.Misc:AddSection("Settings")
@@ -1073,7 +1140,7 @@ screenGui.Name = "ControlGUI"
 local toggleButton = Instance.new("ImageButton", screenGui)
 toggleButton.Size = UDim2.new(0, 50, 0, 50)
 toggleButton.Position = UDim2.new(0.02, 0, 0.22, 0)
-toggleButton.Image = "rbxassetid://93384558628762"
+toggleButton.Image = "rbxassetid://100206144433004"
 toggleButton.BackgroundTransparency = 1
 toggleButton.Active = true
 toggleButton.Draggable = false
@@ -1134,4 +1201,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Auto Stats: Ready | Kitsune M1: ON | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Auto Stats: Ready | Auto Random Fruit: Ready | Kitsune M1: ON | Floating Button: Added | SEA 3 FIXED") 
