@@ -636,14 +636,14 @@ local noFallConn = nil
 local LastQuestLevel = 0
 
 -- =====================================================
--- AUTO FARM STATE (THÊM MỚI)
+-- AUTO FARM STATE
 -- =====================================================
 local AutoFarmBone = false
 local AutoFarmCake = false
 local AutoFarmCakeQuest = false
 local AutoFarmKatakuri = false
 
--- Katakuri spots
+-- Katakuri spots (nhiều bãi quái)
 local KatakuriSpots = {
     CFrame.new(-1830, 50, -12660),
     CFrame.new(-1900, 50, -12580),
@@ -725,7 +725,8 @@ end
 
 -- =====================================================
 -- FIND MOB
--- =====================================================local function GetNearestMob(TargetName)
+-- =====================================================
+local function GetNearestMob(TargetName)
     local char = LP.Character
     if not char then return nil end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -791,7 +792,7 @@ local function stopCustomNoFall()
 end
 
 -- =====================================================
--- AUTO FARM BONE (KHÔNG QUEST)
+-- AUTO FARM BONE (KHÔNG QUEST - NHIỀU BÃI QUÁI)
 -- =====================================================
 local BonePos = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
 
@@ -1317,7 +1318,7 @@ end)
 
 Tabs.Farm:AddToggle("AutoFarmKatakuri", {
     Title       = "Auto Farm Katakuri",
-    Description = "Farm nhiều bãi quái vùng Katakuri (Cake + Choco)",
+    Description = "Farm nhiều bãi quái vùng Katakuri (Cake + Choco) - 5 bãi luân phiên",
     Default     = false,
 }):OnChanged(function(v) 
     AutoFarmKatakuri = v 
