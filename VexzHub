@@ -628,7 +628,7 @@ end
 -- =====================================================
 local StartFarm = false
 local BringMobEnabled = false
-local MaxBringCount = 2
+local MaxBringCount = 6  -- TĂNG LÊN 6 MOB MẶC ĐỊNH
 local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
@@ -1102,7 +1102,7 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB
+-- BRING MOB (ĐÃ TĂNG CƯỜNG: 10 MOB, KHOẢNG CÁCH 600, HITBOX 80)
 -- =====================================================
 task.spawn(function()
     while task.wait(0.3) do
@@ -1140,12 +1140,12 @@ task.spawn(function()
                 if not hum or hum.Health <= 0 or not hrp then continue end
                 if v.Name ~= mobName then continue end
                 local dist = (hrp.Position - FarmPos).Magnitude
-                if dist > 8 and dist <= 350 then
+                if dist > 3 and dist <= 600 then  -- TĂNG KHOẢNG CÁCH GOM QUÁI
                     task.spawn(function()
                         pcall(function()
-                            if dist > 150 then hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 3, 0)); task.wait(0.05) end
+                            if dist > 100 then hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 5, 0)); task.wait(0.03) end  -- TĂNG TỐC ĐỘ GOM
                             local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(FarmPos)})
-                            hrp.CanCollide = false; hrp.Size = Vector3.new(60, 60, 60)
+                            hrp.CanCollide = false; hrp.Size = Vector3.new(80, 80, 80)  -- TĂNG HITBOX MOB
                             hrp.Velocity = Vector3.zero; hrp.AssemblyLinearVelocity = Vector3.zero
                             hum.WalkSpeed = 0; hum.JumpPower = 0
                             if v:FindFirstChild("Head") then v.Head.CanCollide = false end
@@ -1337,14 +1337,20 @@ Tabs.Farm:AddDropdown("SelectWeapon", {
 -- =====================================================
 -- TAB MOB
 -- =====================================================
-Tabs.Mob:AddSection("Bring Mob")
+Tabs.Mob:AddSection("Bring Mob (Đã Tăng Cường)")
+Tabs.Mob:AddParagraph({
+    Title = "Thông tin",
+    Content = "Gom tối đa 10 quái về 1 chỗ - Khoảng cách lên đến 600 studs"
+})
+
 Tabs.Mob:AddToggle("BringMob", {
     Title       = "Bring Mob",
     Description = "Keo quai ve 1 cho (Can bat Start Farm)",
     Default     = false,
 }):OnChanged(function(v) BringMobEnabled = v end)
+
 Tabs.Mob:AddSlider("BringCount", {
-    Title = "Bring Mob Count", Min = 2, Max = 6, Rounding = 1, Default = 2,
+    Title = "Bring Mob Count", Min = 1, Max = 10, Rounding = 1, Default = 6,
 }):OnChanged(function(v) MaxBringCount = v end)
 
 -- =====================================================
@@ -1513,4 +1519,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED (10 Mobs/600 Studs) | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
