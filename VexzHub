@@ -636,13 +636,25 @@ local noFallConn = nil
 local LastQuestLevel = 0
 
 -- =====================================================
--- AUTO FARM BONE / CAKE STATE (THÊM MỚI)
+-- AUTO FARM STATE (THÊM MỚI)
 -- =====================================================
 local AutoFarmBone = false
 local AutoFarmCake = false
+local AutoFarmCakeQuest = false
+local AutoFarmKatakuri = false
+
+-- Katakuri spots
+local KatakuriSpots = {
+    CFrame.new(-1830, 50, -12660),
+    CFrame.new(-1900, 50, -12580),
+    CFrame.new(-1780, 50, -12550),
+    CFrame.new(-1860, 50, -12480),
+    CFrame.new(-1750, 50, -12600),
+}
+local KatakuriSpotIndex = 1
 
 -- =====================================================
--- TWEEN TO (PHẢI ĐỊNH NGHĨA TRƯỚC KHI DÙNG)
+-- TWEEN TO
 -- =====================================================
 local function tweenTo(targetCF, speed)
     speed = speed or 250
@@ -712,9 +724,8 @@ local function stopNoFall()
 end
 
 -- =====================================================
--- FIND MOB (PHẢI ĐỊNH NGHĨA TRƯỚC KHI DÙNG)
--- =====================================================
-local function GetNearestMob(TargetName)
+-- FIND MOB
+-- =====================================================local function GetNearestMob(TargetName)
     local char = LP.Character
     if not char then return nil end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -735,147 +746,362 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- AUTO FARM BONE / CAKE LOOP (ĐÃ SỬA - ĐẶT SAU KHI CÁC HÀM ĐÃ ĐỊNH NGHĨA)
+-- NOFALL HELPER (Dùng cho Bone/Cake/Katakuri)
+-- =====================================================
+local function startCustomNoFall(mob, checkCondition)
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = 0
+    noFallConn = RunService.RenderStepped:Connect(function()
+        if not checkCondition() then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        local c = LP.Character
+        if not c then return end
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if not mob or not mob.Parent then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        local mr = mob:FindFirstChild("HumanoidRootPart")
+        local mh = mob:FindFirstChildOfClass("Humanoid")
+        if not mr or not mh or mh.Health <= 0 then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        if r then
+            r.CFrame = mr.CFrame * CFrame.new(0, 15, 0)
+            r.Velocity = Vector3.zero
+            r.AssemblyLinearVelocity = Vector3.zero
+        end
+    end)
+end
+
+local function stopCustomNoFall()
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = 196.2
+    local c = LP.Character
+    if c then
+        local hum = c:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false end
+    end
+end
+
+-- =====================================================
+-- AUTO FARM BONE (KHÔNG QUEST)
 -- =====================================================
 local BonePos = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
-local CakePos = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
 
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
-            if not AutoFarmBone and not AutoFarmCake then return end
+            if not AutoFarmBone then return end
             if StartFarm then return end
             
             local char = LP.Character
             if not char then return end
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if not root then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
             
             equipWeapon()
             
-            local targetPos = nil
-            local mobName = nil
-            
-            if AutoFarmBone then
-                targetPos = BonePos
-                mobName = "Reborn Skeleton"
-            elseif AutoFarmCake then
-                targetPos = CakePos
-                mobName = "Cookie Crafter"
-            end
-            
-            if not targetPos or not mobName then return end
-            
-            -- Bỏ quest nếu đang có
             local hasQuest = false
             pcall(function()
                 local main = LP.PlayerGui:FindFirstChild("Main")
                 if main then
                     local qFrame = main:FindFirstChild("Quest")
-                    if qFrame and qFrame.Visible then
-                        hasQuest = true
-                    end
+                    if qFrame and qFrame.Visible then hasQuest = true end
                 end
             end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
             
-            if hasQuest then
-                pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
-                task.wait(0.3)
+            local boneMobs = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
+            local mob = nil
+            for _, name in ipairs(boneMobs) do
+                mob = GetNearestMob(name)
+                if mob then break end
             end
             
-            -- Tìm mob
-            local mob = GetNearestMob(mobName)
-            
             if not mob then
-                -- Bay đến vị trí có mob
                 local enemies = workspace:FindFirstChild("Enemies")
                 if enemies then
-                    for _, v in ipairs(enemies:GetChildren()) do
-                        if v:IsA("Model") and v.Name == mobName then
-                            local hum = v:FindFirstChildOfClass("Humanoid")
-                            local hrp = v:FindFirstChild("HumanoidRootPart")
-                            if hum and hum.Health > 0 and hrp then
-                                tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300)
-                                mob = v
-                                break
+                    for _, name in ipairs(boneMobs) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300)
+                                    mob = v
+                                    break
+                                end
                             end
                         end
+                        if mob then break end
                     end
                 end
-                
-                if not mob then
-                    tweenTo(targetPos, 250)
-                end
+                if not mob then tweenTo(BonePos, 250) end
                 task.wait(0.5)
-                mob = GetNearestMob(mobName)
+                for _, name in ipairs(boneMobs) do
+                    mob = GetNearestMob(name)
+                    if mob then break end
+                end
             end
             
             if not mob then task.wait(0.5); return end
             
             local mobRoot = mob:FindFirstChild("HumanoidRootPart")
             if not mobRoot then return end
-            
             FarmPos = mobRoot.Position
             tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
             
-            -- Treo lên đầu mob
-            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-            workspace.Gravity = 0
-            noFallConn = RunService.RenderStepped:Connect(function()
-                if not AutoFarmBone and not AutoFarmCake then
-                    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-                    workspace.Gravity = 196.2
-                    return
-                end
-                local c = LP.Character
-                if not c then return end
-                local r = c:FindFirstChild("HumanoidRootPart")
-                if not mob or not mob.Parent then
-                    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-                    workspace.Gravity = 196.2
-                    return
-                end
-                local mr = mob:FindFirstChild("HumanoidRootPart")
-                local mh = mob:FindFirstChildOfClass("Humanoid")
-                if not mr or not mh or mh.Health <= 0 then
-                    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-                    workspace.Gravity = 196.2
-                    return
-                end
-                if r then
-                    r.CFrame = mr.CFrame * CFrame.new(0, 15, 0)
-                    r.Velocity = Vector3.zero
-                    r.AssemblyLinearVelocity = Vector3.zero
-                end
-            end)
+            startCustomNoFall(mob, function() return AutoFarmBone end)
             
-            -- Chờ mob chết hoặc tắt farm
-            repeat
-                task.wait(0.1)
+            repeat task.wait(0.1)
                 if not mob or not mob.Parent then break end
                 local mh = mob:FindFirstChildOfClass("Humanoid")
                 if not mh or mh.Health <= 0 then break end
-                if mob:FindFirstChild("HumanoidRootPart") then
-                    FarmPos = mob.HumanoidRootPart.Position
-                end
-            until not AutoFarmBone and not AutoFarmCake
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmBone
             
-            -- Dọn dẹp
-            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
-            workspace.Gravity = 196.2
-            local c = LP.Character
-            if c then
-                local hum = c:FindFirstChildOfClass("Humanoid")
-                if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false end
-            end
+            stopCustomNoFall()
         end)
     end
 end)
 
-print("[Vexz Hub] Auto Farm Bone/Cake ready")
+-- =====================================================
+-- AUTO FARM CAKE (KHÔNG QUEST)
+-- =====================================================
+local CakePos = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmCake then return end
+            if StartFarm then return end
+            
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            
+            equipWeapon()
+            
+            local hasQuest = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then
+                    local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then hasQuest = true end
+                end
+            end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
+            
+            local cakeMobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+            local mob = nil
+            for _, name in ipairs(cakeMobs) do
+                mob = GetNearestMob(name)
+                if mob then break end
+            end
+            
+            if not mob then
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, name in ipairs(cakeMobs) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300)
+                                    mob = v
+                                    break
+                                end
+                            end
+                        end
+                        if mob then break end
+                    end
+                end
+                if not mob then tweenTo(CakePos, 250) end
+                task.wait(0.5)
+                for _, name in ipairs(cakeMobs) do
+                    mob = GetNearestMob(name)
+                    if mob then break end
+                end
+            end
+            
+            if not mob then task.wait(0.5); return end
+            
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            
+            startCustomNoFall(mob, function() return AutoFarmCake end)
+            
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmCake
+            
+            stopCustomNoFall()
+        end)
+    end
+end)
 
 -- =====================================================
--- BRING MOB (FIX: Kết hợp StartFarm)
+-- AUTO FARM KATAKURI (NHIỀU BÃI QUÁI - KHÔNG QUEST)
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmKatakuri then return end
+            if StartFarm then return end
+            
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            
+            equipWeapon()
+            
+            local hasQuest = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then
+                    local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then hasQuest = true end
+                end
+            end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
+            
+            local katakuriMobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}
+            local mob = nil
+            for _, name in ipairs(katakuriMobs) do
+                mob = GetNearestMob(name)
+                if mob then break end
+            end
+            
+            if not mob then
+                local spot = KatakuriSpots[KatakuriSpotIndex]
+                tweenTo(spot, 250)
+                KatakuriSpotIndex = KatakuriSpotIndex % #KatakuriSpots + 1
+                task.wait(0.5)
+                for _, name in ipairs(katakuriMobs) do
+                    mob = GetNearestMob(name)
+                    if mob then break end
+                end
+            end
+            
+            if not mob then task.wait(0.5); return end
+            
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            
+            startCustomNoFall(mob, function() return AutoFarmKatakuri end)
+            
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmKatakuri
+            
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+-- =====================================================
+-- AUTO FARM CAKE QUEST (CÓ QUEST)
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmCakeQuest then return end
+            if StartFarm then return end
+            
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            
+            equipWeapon()
+            
+            local questVisible = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then
+                    local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then questVisible = true end
+                end
+            end)
+            
+            if not questVisible then
+                local cakeQuestPos = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+                tweenTo(cakeQuestPos, 250)
+                task.wait(0.5)
+                pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", "CakeQuest1", 1) end)
+                task.wait(0.5)
+            end
+            
+            local mobNames = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+            local mob = nil
+            for _, name in ipairs(mobNames) do
+                mob = GetNearestMob(name)
+                if mob then break end
+            end
+            
+            if not mob then
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, name in ipairs(mobNames) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300)
+                                    mob = v
+                                    break
+                                end
+                            end
+                        end
+                        if mob then break end
+                    end
+                end
+                if not mob then tweenTo(CFrame.new(-2021, 37, -12200), 250) end
+                task.wait(0.5)
+            end
+            
+            if not mob then task.wait(0.5); return end
+            
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            
+            startCustomNoFall(mob, function() return AutoFarmCakeQuest end)
+            
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmCakeQuest
+            
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
+
+-- =====================================================
+-- BRING MOB
 -- =====================================================
 task.spawn(function()
     while task.wait(0.3) do
@@ -934,7 +1160,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- MAIN FARM LOOP (FIX: Auto equip weapon khi farm)
+-- MAIN FARM LOOP
 -- =====================================================
 task.spawn(function()
     while true do
@@ -945,8 +1171,7 @@ task.spawn(function()
             continue
         end
 
-        -- Tạm dừng farm quest nếu đang farm bone/cake
-        if AutoFarmBone or AutoFarmCake then continue end
+        if AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri then continue end
 
         equipWeapon()
 
@@ -1050,12 +1275,54 @@ local Tabs = {
 -- =====================================================
 -- TAB FARM
 -- =====================================================
-Tabs.Farm:AddSection("Auto Farm")
+Tabs.Farm:AddSection("Auto Farm Quest")
 Tabs.Farm:AddToggle("StartFarm", {
     Title       = "Start Farm",
     Description = "Auto Quest + Farm Level",
     Default     = false,
 }):OnChanged(function(v) StartFarm = v end)
+
+Tabs.Farm:AddSection("Auto Farm Đặc Biệt (Không Quest)")
+Tabs.Farm:AddParagraph({
+    Title = "Thông tin",
+    Content = "Các chế độ farm không cần nhận Quest, tự động bay đến bãi quái"
+})
+
+Tabs.Farm:AddToggle("AutoFarmBone", {
+    Title       = "Auto Farm Bone",
+    Description = "Farm Bone (Reborn Skeleton, Living Zombie, Demonic Soul, Posessed Mummy)",
+    Default     = false,
+}):OnChanged(function(v) 
+    AutoFarmBone = v 
+    if v then AutoFarmCake = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end
+end)
+
+Tabs.Farm:AddToggle("AutoFarmCake", {
+    Title       = "Auto Farm Cake (Không Quest)",
+    Description = "Farm Cake (Cookie Crafter, Cake Guard, Baking Staff, Head Baker)",
+    Default     = false,
+}):OnChanged(function(v) 
+    AutoFarmCake = v 
+    if v then AutoFarmBone = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end
+end)
+
+Tabs.Farm:AddToggle("AutoFarmCakeQuest", {
+    Title       = "Auto Farm Cake (Có Quest)",
+    Description = "Farm Cake có nhận quest (Cookie Crafter, Cake Guard, Baking Staff, Head Baker)",
+    Default     = false,
+}):OnChanged(function(v) 
+    AutoFarmCakeQuest = v 
+    if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmKatakuri = false end
+end)
+
+Tabs.Farm:AddToggle("AutoFarmKatakuri", {
+    Title       = "Auto Farm Katakuri",
+    Description = "Farm nhiều bãi quái vùng Katakuri (Cake + Choco)",
+    Default     = false,
+}):OnChanged(function(v) 
+    AutoFarmKatakuri = v 
+    if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmCakeQuest = false end
+end)
 
 Tabs.Farm:AddSection("Select Weapon")
 Tabs.Farm:AddDropdown("SelectWeapon", {
@@ -1080,48 +1347,6 @@ Tabs.Mob:AddSlider("BringCount", {
 }):OnChanged(function(v) MaxBringCount = v end)
 
 -- =====================================================
--- TAB MOB - AUTO FARM BONE & CAKE
--- =====================================================
-Tabs.Mob:AddSection("Auto Farm Bone & Cake")
-Tabs.Mob:AddParagraph({
-    Title = "Thông tin",
-    Content = "Farm Bone hoặc Cake KHÔNG cần nhận Quest\n(Bone: Haunted Castle | Cake: Cake Land)"
-})
-
-Tabs.Mob:AddToggle("AutoFarmBone", {
-    Title       = "Auto Farm Bone",
-    Description = "Tự động farm Bone (Reborn Skeleton)",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmBone = v 
-    if v then AutoFarmCake = false end
-    if v then
-        print("[Vexz Hub] Auto Farm Bone: ON")
-    else
-        print("[Vexz Hub] Auto Farm Bone: OFF")
-    end
-end)
-
-Tabs.Mob:AddToggle("AutoFarmCake", {
-    Title       = "Auto Farm Cake",
-    Description = "Tự động farm Cake (Cookie Crafter)",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmCake = v 
-    if v then AutoFarmBone = false end
-    if v then
-        print("[Vexz Hub] Auto Farm Cake: ON")
-    else
-        print("[Vexz Hub] Auto Farm Cake: OFF")
-    end
-end)
-
-Tabs.Mob:AddParagraph({
-    Title = "Lưu ý",
-    Content = "- Bone và Cake không thể bật cùng lúc\n- Khi bật Bone/Cake, Auto Quest sẽ tạm dừng\n- Cần tắt Bone/Cake để Auto Quest hoạt động lại"
-})
-
--- =====================================================
 -- TAB FRUIT & DUNGEON
 -- =====================================================
 Tabs.Fruit:AddSection("Auto Random Fruit")
@@ -1136,11 +1361,7 @@ Tabs.Fruit:AddToggle("AutoRandomFruit", {
     Default     = false,
 }):OnChanged(function(v) 
     AutoRandomFruitEnabled = v 
-    if v then
-        print("[Vexz Hub] Auto Random Fruit: ON")
-    else
-        print("[Vexz Hub] Auto Random Fruit: OFF")
-    end
+    if v then print("[Vexz Hub] Auto Random Fruit: ON") else print("[Vexz Hub] Auto Random Fruit: OFF") end
 end)
 
 Tabs.Fruit:AddSection("Hướng dẫn")
@@ -1164,11 +1385,7 @@ Tabs.LocalPlayer:AddToggle("AutoStats", {
     Default     = false,
 }):OnChanged(function(v) 
     AutoStatsEnabled = v 
-    if v then
-        print("[Vexz Hub] Auto Stats: ON - Selected: " .. SelectedStat)
-    else
-        print("[Vexz Hub] Auto Stats: OFF")
-    end
+    if v then print("[Vexz Hub] Auto Stats: ON - Selected: " .. SelectedStat) else print("[Vexz Hub] Auto Stats: OFF") end
 end)
 
 Tabs.LocalPlayer:AddDropdown("SelectStat", {
@@ -1295,4 +1512,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake: Ready | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
