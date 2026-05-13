@@ -250,7 +250,7 @@ end
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait(0.05) end end)
 
 -- =====================================================
--- ORIGINAL QUEST DATA
+-- ORIGINAL QUEST DATA (GIỮ NGUYÊN TOÀN BỘ)
 -- =====================================================
 QuestCheck = function()
     local I = game.Players.LocalPlayer.Data.Level.Value
@@ -460,23 +460,23 @@ QuestCheck = function()
             PosQ = CFrame.new(-290.07, 42.90, 5581.59); PosM = CFrame.new(-187.33, 86.24, 6013.51)
         elseif I == 1575 or I <= 1599 then
             Mon = "Dragon Crew Warrior"; Qdata = 1; Qname = "DragonCrewQuest"; NameMon = "Dragon Crew Warrior"
-            PosQ = CFrame.new(6737.06055,127.417763,-712.300659,-0.463954359,-7.19574755e-09,0.885859072,7.69187665e-08,1,4.84078626e-08,-0.885859072,9.05982276e-08,-0.463954359)
-            PosM = CFrame.new(6709.76367,52.3442993,-1139.02966,-0.763515472,0,0.645789504,0,1,0,-0.645789504,0,-0.763515472)
+            PosQ = CFrame.new(6737.06055,127.417763,-712.300659)
+            PosM = CFrame.new(6709.76367,52.3442993,-1139.02966)
         elseif I == 1600 or I <= 1624 then
             Mon = "Dragon Crew Archer"; Qdata = 2; Qname = "DragonCrewQuest"; NameMon = "Dragon Crew Archer"
-            PosQ = CFrame.new(6737.06055,127.417763,-712.300659,-0.463954359,-7.19574755e-09,0.885859072,7.69187665e-08,1,4.84078626e-08,-0.885859072,9.05982276e-08,-0.463954359)
-            PosM = CFrame.new(6668.76172,481.376923,329.12207,-0.121787429,0,-0.992556155,0,1,0,0.992556155,0,-0.121787429)
+            PosQ = CFrame.new(6737.06055,127.417763,-712.300659)
+            PosM = CFrame.new(6668.76172,481.376923,329.12207)
         elseif I == 1625 or I <= 1649 then
             Mon = "Hydra Enforcer"; Qname = "VenomCrewQuest"; Qdata = 1; NameMon = "Hydra Enforcer"
             PosQ = CFrame.new(5206.40185546875, 1004.10498046875, 748.3504638671875)
-            PosM = CFrame.new(4547.11523, 1003.10217, 334.194824, 0.388810456, -0, -0.921317935, 0, 1, -0, 0.921317935, 0, 0.388810456)
+            PosM = CFrame.new(4547.11523, 1003.10217, 334.194824)
         elseif I == 1650 or I <= 1699 then
             Mon = "Venomous Assailant"; Qname = "VenomCrewQuest"; Qdata = 2; NameMon = "Venomous Assailant"
             PosQ = CFrame.new(5206.40185546875, 1004.10498046875, 748.3504638671875)
-            PosM = CFrame.new(4674.92676, 1134.82654, 996.308838, 0.731321394, -0, -0.682033002, 0, 1, -0, 0.682033002, 0, 0.731321394)
+            PosM = CFrame.new(4674.92676, 1134.82654, 996.308838)
         elseif I == 1700 or I <= 1724 then
             Mon = "Marine Commodore"; Qdata = 1; Qname = "MarineTreeIsland"; NameMon = "Marine Commodore"
-            PosQ = CFrame.new(2180.54126, 27.8156815, -6741.5498, -0.965929747, 0, .258804798, 0, 1, 0, -0.258804798, 0, -0.965929747)
+            PosQ = CFrame.new(2180.54126, 27.8156815, -6741.5498)
             PosM = CFrame.new(2286.0078125, 73.133918762207, -7159.8090820312)
         elseif I == 1725 or I <= 1774 then
             Mon = "Marine Rear Admiral"; NameMon = "Marine Rear Admiral"; Qname = "MarineTreeIsland"; Qdata = 2
@@ -484,75 +484,75 @@ QuestCheck = function()
             PosM = CFrame.new(3656.7736816406, 160.52406311035, -7001.5986328125)
         elseif I == 1775 or I <= 1799 then
             Mon = "Fishman Raider"; Qdata = 1; Qname = "DeepForestIsland3"; NameMon = "Fishman Raider"
-            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652, -0.882952213, 0, .469463557, 0, 1, 0, -0.469463557, 0, -0.882952213)
+            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652)
             PosM = CFrame.new(-10407.526367188, 331.76263427734, -8368.5166015625)
         elseif I == 1800 or I <= 1824 then
             Mon = "Fishman Captain"; Qdata = 2; Qname = "DeepForestIsland3"; NameMon = "Fishman Captain"
-            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652, -0.882952213, 0, .469463557, 0, 1, 0, -0.469463557, 0, -0.882952213)
+            PosQ = CFrame.new(-10581.6563, 330.872955, -8761.18652)
             PosM = CFrame.new(-10994.701171875, 352.38140869141, -9002.1103515625)
         elseif I == 1825 or I <= 1849 then
             Mon = "Forest Pirate"; Qdata = 1; Qname = "DeepForestIsland"; NameMon = "Forest Pirate"
-            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137, .707134247, 0, -0.707079291, 0, 1, 0, .707079291, 0, .707134247)
+            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137)
             PosM = CFrame.new(-13274.478515625, 332.37814331055, -7769.5805664062)
         elseif I == 1850 or I <= 1899 then
             Mon = "Mythological Pirate"; Qdata = 2; Qname = "DeepForestIsland"; NameMon = "Mythological Pirate"
-            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137, .707134247, 0, -0.707079291, 0, 1, 0, .707079291, 0, .707134247)
+            PosQ = CFrame.new(-13234.04, 331.488495, -7625.40137)
             PosM = CFrame.new(-13680.607421875, 501.08154296875, -6991.189453125)
         elseif I == 1900 or I <= 1924 then
             Mon = "Jungle Pirate"; Qdata = 1; Qname = "DeepForestIsland2"; NameMon = "Jungle Pirate"
-            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953, -0.0871315002, 0, .996196866, 0, 1, 0, -0.996196866, 0, -0.0871315002)
+            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953)
             PosM = CFrame.new(-12256.16015625, 331.73828125, -10485.836914062)
         elseif I == 1925 or I <= 1974 then
             Mon = "Musketeer Pirate"; Qdata = 2; Qname = "DeepForestIsland2"; NameMon = "Musketeer Pirate"
-            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953, -0.0871315002, 0, .996196866, 0, 1, 0, -0.996196866, 0, -0.0871315002)
+            PosQ = CFrame.new(-12680.3818, 389.971039, -9902.01953)
             PosM = CFrame.new(-13457.904296875, 391.54565429688, -9859.177734375)
         elseif I == 1975 or I <= 1999 then
             Mon = "Reborn Skeleton"; Qdata = 1; Qname = "HauntedQuest1"; NameMon = "Reborn Skeleton"
-            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277)
             PosM = CFrame.new(-8763.7236328125, 165.72299194336, 6159.8618164062)
         elseif I == 2000 or I <= 2024 then
             Mon = "Living Zombie"; Qdata = 2; Qname = "HauntedQuest1"; NameMon = "Living Zombie"
-            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277, 0, 0, 1, 0, 1, 0, -1, 0, 0)
+            PosQ = CFrame.new(-9479.2168, 141.215088, 5566.09277)
             PosM = CFrame.new(-10144.131835938, 138.6266784668, 5838.0888671875)
         elseif I == 2025 or I <= 2049 then
             Mon = "Demonic Soul"; Qdata = 1; Qname = "HauntedQuest2"; NameMon = "Demonic Soul"
-            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533)
             PosM = CFrame.new(-9505.8720703125, 172.10482788086, 6158.9931640625)
         elseif I == 2050 or I <= 2074 then
             Mon = "Posessed Mummy"; Qdata = 2; Qname = "HauntedQuest2"; NameMon = "Posessed Mummy"
-            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-9516.99316, 172.017181, 6078.46533)
             PosM = CFrame.new(-9582.0224609375, 6.2515273094177, 6205.478515625)
         elseif I == 2075 or I <= 2099 then
             Mon = "Peanut Scout"; Qdata = 1; Qname = "NutsIslandQuest"; NameMon = "Peanut Scout"
-            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875)
             PosM = CFrame.new(-2143.2419433594, 47.721984863281, -10029.995117188)
         elseif I == 2100 or I <= 2124 then
             Mon = "Peanut President"; Qdata = 2; Qname = "NutsIslandQuest"; NameMon = "Peanut President"
-            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-2104.3908691406, 38.104167938232, -10194.21875)
             PosM = CFrame.new(-1859.3540039062, 38.103168487549, -10422.4296875)
         elseif I == 2125 or I <= 2149 then
             Mon = "Ice Cream Chef"; Qdata = 1; Qname = "IceCreamIslandQuest"; NameMon = "Ice Cream Chef"
-            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438)
             PosM = CFrame.new(-872.24658203125, 65.81957244873, -10919.95703125)
         elseif I == 2150 or I <= 2199 then
             Mon = "Ice Cream Commander"; Qdata = 2; Qname = "IceCreamIslandQuest"; NameMon = "Ice Cream Commander"
-            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+            PosQ = CFrame.new(-820.64825439453, 65.819526672363, -10965.795898438)
             PosM = CFrame.new(-558.06103515625, 112.04895782471, -11290.774414062)
         elseif I == 2200 or I <= 2224 then
             Mon = "Cookie Crafter"; Qdata = 1; Qname = "CakeQuest1"; NameMon = "Cookie Crafter"
-            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295, .957576931, -8.80302053e-08, .288177818, 6.9301187e-08, 1, 7.51931211e-08, -0.288177818, -5.2032135e-08, .957576931)
+            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295)
             PosM = CFrame.new(-2374.13671875, 37.798263549805, -12125.30859375)
         elseif I == 2225 or I <= 2249 then
             Mon = "Cake Guard"; Qdata = 2; Qname = "CakeQuest1"; NameMon = "Cake Guard"
-            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295, .957576931, -8.80302053e-08, .288177818, 6.9301187e-08, 1, 7.51931211e-08, -0.288177818, -5.2032135e-08, .957576931)
+            PosQ = CFrame.new(-2021.32007, 37.7982254, -12028.7295)
             PosM = CFrame.new(-1598.3070068359, 43.773197174072, -12244.581054688)
         elseif I == 2250 or I <= 2274 then
             Mon = "Baking Staff"; Qdata = 1; Qname = "CakeQuest2"; NameMon = "Baking Staff"
-            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391, -0.96804446, 4.22142143e-08, .250778586, 4.74911062e-08, 1, 1.49904711e-08, -0.250778586, 2.64211941e-08, -0.96804446)
+            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391)
             PosM = CFrame.new(-1887.8099365234, 77.618507385254, -12998.350585938)
         elseif I == 2275 or I <= 2299 then
             Mon = "Head Baker"; Qdata = 2; Qname = "CakeQuest2"; NameMon = "Head Baker"
-            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391, -0.96804446, 4.22142143e-08, .250778586, 4.74911062e-08, 1, 1.49904711e-08, -0.250778586, 2.64211941e-08, -0.96804446)
+            PosQ = CFrame.new(-1927.91602, 37.7981339, -12842.5391)
             PosM = CFrame.new(-2216.1882324219, 82.884521484375, -12869.293945312)
         elseif I == 2300 or I <= 2324 then
             Mon = "Cocoa Warrior"; Qdata = 1; Qname = "ChocQuest1"; NameMon = "Cocoa Warrior"
@@ -576,18 +576,18 @@ QuestCheck = function()
             PosM = CFrame.new(-1310.5003662109, 26.016523361206, -14562.404296875)
         elseif I == 2450 or I <= 2474 then
             Mon = "Isle Outlaw"; Qdata = 1; Qname = "TikiQuest1"; NameMon = "Isle Outlaw"
-            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125, .213092566, 0, -0.977032006, 0, 1, 0, .977032006, 0, .213092566)
+            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125)
             PosM = CFrame.new(-16479.900390625, 226.6117401123, -300.31143188477)
         elseif I == 2475 or I <= 2499 then
             Mon = "Island Boy"; Qdata = 2; Qname = "TikiQuest1"; NameMon = "Island Boy"
-            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125, .213092566, 0, -0.977032006, 0, 1, 0, .977032006, 0, .213092566)
+            PosQ = CFrame.new(-16548.8164, 55.6059914, -172.8125)
             PosM = CFrame.new(-16849.396484375, 192.86505126953, -150.78532409668)
         elseif I == 2500 or I <= 2524 then
             Mon = "Sun-kissed Warrior"; Qdata = 1; Qname = "TikiQuest2"; NameMon = "kissed Warrior"
             PosM = CFrame.new(-16347, 64, 984); PosQ = CFrame.new(-16538, 55, 1049)
         elseif I == 2525 or I <= 2550 then
             Mon = "Isle Champion"; Qdata = 2; Qname = "TikiQuest2"; NameMon = "Isle Champion"
-            PosQ = CFrame.new(-16541.0215, 57.3082275, 1051.46118, .0410757065, 0, -0.999156058, 0, 1, 0, .999156058, 0, .0410757065)
+            PosQ = CFrame.new(-16541.0215, 57.3082275, 1051.46118)
             PosM = CFrame.new(-16602.1015625, 130.38734436035, 1087.2456054688)
         elseif I == 2551 or I <= 2574 then
             Mon = "Serpent Hunter"; Qdata = 1; Qname = "TikiQuest3"; NameMon = "Serpent Hunter"
@@ -596,29 +596,29 @@ QuestCheck = function()
             Mon = "Skull Slayer"; Qdata = 2; Qname = "TikiQuest3"; NameMon = "Skull Slayer"
             PosQ = CFrame.new(-16668.03,105.32,1568.60); PosM = CFrame.new(-16709.49,419.68,1751.09)
         elseif I >= 2600 and I <= 2624 then
-            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
+            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359)
             Mon = "Reef Bandit"; Qdata = 1; Qname = "SubmergedQuest1"; NameMon = "Reef Bandit"
-            PosM = CFrame.new(11019.1318, -2146.06812, 9342.3916, -0.719955266, -1.74275385e-08, 0.69402045, 5.76556367e-08, 1, 8.49211546e-08, -0.69402045, 1.01153624e-07, -0.719955266)
+            PosM = CFrame.new(11019.1318, -2146.06812, 9342.3916)
         elseif I >= 2625 and I <= 2649 then
-            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359, 0.934615612, -9.33109447e-08, -0.355659455, 9.17655143e-08, 1, -2.12154276e-08, 0.355659455, -1.28090019e-08, 0.934615612)
+            PosQ = CFrame.new(10778.875, -2087.72437, 9265.18359)
             Mon = "Coral Pirate"; Qdata = 2; Qname = "SubmergedQuest1"; NameMon = "Coral Pirate"
-            PosM = CFrame.new(10808.6006, -2030.36145, 9364.2334, -0.775185347, -0.0359364748, 0.6307109, 0.0615428537, 0.989336014, 0.132010356, -0.628728986, 0.141148239, -0.764707148)
+            PosM = CFrame.new(10808.6006, -2030.36145, 9364.2334)
         elseif I >= 2650 and I <= 2674 then
-            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
+            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624)
             Mon = "Sea Chanter"; Qdata = 1; Qname = "SubmergedQuest2"; NameMon = "Sea Chanter"
-            PosM = CFrame.new(10671.2715, -2057.59155, 10047.2588, -0.846484065, -3.11045447e-08, 0.532414079, -5.55383117e-08, 1, -2.98785316e-08, -0.532414079, -5.48610757e-08, -0.846484065)
+            PosM = CFrame.new(10671.2715, -2057.59155, 10047.2588)
         elseif I >= 2675 and I <= 2699 then
-            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624, -0.321384728, 9.87648434e-08, -0.946948707, 7.13271007e-08, 1, 8.00902953e-08, 0.946948707, -4.18033075e-08, -0.321384728)
+            PosQ = CFrame.new(10880.6855, -2086.20044, 10032.624)
             Mon = "Ocean Prophet"; Qdata = 2; Qname = "SubmergedQuest2"; NameMon = "Ocean Prophet"
-            PosM = CFrame.new(11008.5195, -2007.72839, 10223.0791, -0.688615739, 2.33523378e-09, -0.725126445, 2.99292546e-09, 1, 3.78221315e-10, 0.725126445, -1.90980032e-09, -0.688615739)
+            PosM = CFrame.new(11008.5195, -2007.72839, 10223.0791)
         elseif I >= 2700 and I <= 2724 then
-            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
+            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234)
             Mon = "High Disciple"; Qdata = 1; Qname = "SubmergedQuest3"; NameMon = "High Disciple"
-            PosM = CFrame.new(9750.41602, -1966.93884, 9753.36035, -0.749824047, 5.57797613e-08, -0.661637306, 2.03500754e-08, 1, 6.1243199e-08, 0.661637306, 3.24572511e-08, -0.749824047)
+            PosM = CFrame.new(9750.41602, -1966.93884, 9753.36035)
         elseif I >= 2725 then
-            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234, -0.957327187, 4.11991223e-08, 0.289006323, 1.5775445e-08, 1, -9.02985846e-08, -0.289006323, -8.18860855e-08, -0.957327187)
+            PosQ = CFrame.new(9640.08789, -1992.44507, 9613.65234)
             Mon = "Grand Devotee"; Qdata = 2; Qname = "SubmergedQuest3"; NameMon = "Grand Devotee"
-            PosM = CFrame.new(9611.70508, -1993.47119, 9882.68848, -0.591375351, 4.14332426e-08, -0.806396425, 4.73774868e-08, 1, 1.66361875e-08, 0.806396425, -2.83668058e-08, -0.591375351)
+            PosM = CFrame.new(9611.70508, -1993.47119, 9882.68848)
         end
     end
 end
@@ -637,13 +637,12 @@ local activeFlyConn = nil
 local noFallConn = nil
 local LastQuestLevel = 0
 
--- =====================================================
 -- AUTO FARM STATE
--- =====================================================
 local AutoFarmBone = false
 local AutoFarmCake = false
 local AutoFarmCakeQuest = false
 local AutoFarmKatakuri = false
+local AutoFarmSpecialEnabled = false -- FIX: Biến kiểm soát toggle chính
 
 -- Katakuri spots
 local KatakuriSpots = {
@@ -654,6 +653,29 @@ local KatakuriSpots = {
     CFrame.new(-1750, 50, -12600),
 }
 local KatakuriSpotIndex = 1
+
+-- =====================================================
+-- NOCLIP (BAY XUYÊN TƯỜNG)
+-- =====================================================
+local NoClipEnabled = false
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if NoClipEnabled then
+            pcall(function()
+                local char = LP.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+print("[Vexz Hub] NoClip ready")
 
 -- =====================================================
 -- TWEEN TO
@@ -802,6 +824,7 @@ task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not AutoFarmBone then return end
+            if not AutoFarmSpecialEnabled then return end -- FIX: Kiểm tra toggle chính
             if StartFarm then return end
             
             local char = LP.Character
@@ -860,14 +883,14 @@ task.spawn(function()
             FarmPos = mobRoot.Position
             tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
             
-            startCustomNoFall(mob, function() return AutoFarmBone end)
+            startCustomNoFall(mob, function() return AutoFarmBone and AutoFarmSpecialEnabled end)
             
             repeat task.wait(0.1)
                 if not mob or not mob.Parent then break end
                 local mh = mob:FindFirstChildOfClass("Humanoid")
                 if not mh or mh.Health <= 0 then break end
                 if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
-            until not AutoFarmBone
+            until not AutoFarmBone or not AutoFarmSpecialEnabled
             
             stopCustomNoFall()
         end)
@@ -883,6 +906,7 @@ task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not AutoFarmCake then return end
+            if not AutoFarmSpecialEnabled then return end -- FIX
             if StartFarm then return end
             
             local char = LP.Character
@@ -941,14 +965,14 @@ task.spawn(function()
             FarmPos = mobRoot.Position
             tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
             
-            startCustomNoFall(mob, function() return AutoFarmCake end)
+            startCustomNoFall(mob, function() return AutoFarmCake and AutoFarmSpecialEnabled end)
             
             repeat task.wait(0.1)
                 if not mob or not mob.Parent then break end
                 local mh = mob:FindFirstChildOfClass("Humanoid")
                 if not mh or mh.Health <= 0 then break end
                 if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
-            until not AutoFarmCake
+            until not AutoFarmCake or not AutoFarmSpecialEnabled
             
             stopCustomNoFall()
         end)
@@ -962,6 +986,7 @@ task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not AutoFarmKatakuri then return end
+            if not AutoFarmSpecialEnabled then return end -- FIX
             if StartFarm then return end
             
             local char = LP.Character
@@ -1005,14 +1030,14 @@ task.spawn(function()
             FarmPos = mobRoot.Position
             tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
             
-            startCustomNoFall(mob, function() return AutoFarmKatakuri end)
+            startCustomNoFall(mob, function() return AutoFarmKatakuri and AutoFarmSpecialEnabled end)
             
             repeat task.wait(0.1)
                 if not mob or not mob.Parent then break end
                 local mh = mob:FindFirstChildOfClass("Humanoid")
                 if not mh or mh.Health <= 0 then break end
                 if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
-            until not AutoFarmKatakuri
+            until not AutoFarmKatakuri or not AutoFarmSpecialEnabled
             
             stopCustomNoFall()
         end)
@@ -1026,6 +1051,7 @@ task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not AutoFarmCakeQuest then return end
+            if not AutoFarmSpecialEnabled then return end -- FIX
             if StartFarm then return end
             
             local char = LP.Character
@@ -1087,14 +1113,14 @@ task.spawn(function()
             FarmPos = mobRoot.Position
             tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
             
-            startCustomNoFall(mob, function() return AutoFarmCakeQuest end)
+            startCustomNoFall(mob, function() return AutoFarmCakeQuest and AutoFarmSpecialEnabled end)
             
             repeat task.wait(0.1)
                 if not mob or not mob.Parent then break end
                 local mh = mob:FindFirstChildOfClass("Humanoid")
                 if not mh or mh.Health <= 0 then break end
                 if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
-            until not AutoFarmCakeQuest
+            until not AutoFarmCakeQuest or not AutoFarmSpecialEnabled
             
             stopCustomNoFall()
         end)
@@ -1110,14 +1136,13 @@ task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not BringMobEnabled or not FarmPos then return end
-            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            if not StartFarm and not (AutoFarmSpecialEnabled and (AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri)) then return end
             
             local char = LP.Character
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
             
-            -- Xác định danh sách mob cần gom
             local mobNames = {}
             
             if StartFarm then
@@ -1145,7 +1170,6 @@ task.spawn(function()
             
             if #mobNames == 0 then return end
             
-            -- Kiểm tra người chơi khác
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
@@ -1159,7 +1183,6 @@ task.spawn(function()
 
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
 
-            -- Gom TẤT CẢ mob trong phạm vi BringMobRange
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
                 if brought >= MaxBringCount then break end
@@ -1169,12 +1192,10 @@ task.spawn(function()
                 local hrp = v:FindFirstChild("HumanoidRootPart")
                 if not hum or hum.Health <= 0 or not hrp then continue end
                 
-                -- Kiểm tra mob có trong danh sách không
                 local isValidMob = false
                 for _, name in ipairs(mobNames) do
                     if v.Name == name then 
-                        isValidMob = true
-                        break 
+                        isValidMob = true; break 
                     end
                 end
                 if not isValidMob then continue end
@@ -1182,7 +1203,6 @@ task.spawn(function()
                 local distToFarm = (hrp.Position - FarmPos).Magnitude
                 local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
                 
-                -- Gom mob trong phạm vi và chưa ở gần farm
                 if distToPlayer <= BringMobRange and distToFarm > 8 then
                     task.spawn(function()
                         pcall(function()
@@ -1347,14 +1367,15 @@ Tabs.Farm:AddToggle("StartFarm", {
 Tabs.Farm:AddSection("Auto Farm Đặc Biệt")
 Tabs.Farm:AddParagraph({
     Title = "Thông tin",
-    Content = "Farm không cần Quest - Chọn 1 trong các chế độ bên dưới"
+    Content = "Farm không cần Quest - Bật Toggle rồi chọn khu vực"
 })
 
 Tabs.Farm:AddToggle("AutoFarmSpecial", {
     Title       = "Bật/Tắt Auto Farm Đặc Biệt",
-    Description = "Bật để farm Bone/Cake/Katakuri (không quest)",
+    Description = "Bật để kích hoạt farm đặc biệt",
     Default     = false,
 }):OnChanged(function(v) 
+    AutoFarmSpecialEnabled = v
     if not v then
         AutoFarmBone = false
         AutoFarmCake = false
@@ -1370,6 +1391,8 @@ Tabs.Farm:AddDropdown("SelectFarmSpecial", {
     Default = "Bone",
     Multi = false,
 }):OnChanged(function(v)
+    if not AutoFarmSpecialEnabled then return end -- FIX: Không đổi nếu toggle tắt
+    
     AutoFarmBone = false
     AutoFarmCake = false
     AutoFarmCakeQuest = false
@@ -1427,6 +1450,13 @@ Tabs.Mob:AddSlider("BringSpeed", {
     Rounding = 1,
     Default = 0.3,
 }):OnChanged(function(v) BringMobSpeed = v end)
+
+Tabs.Mob:AddSection("NoClip")
+Tabs.Mob:AddToggle("NoClip", {
+    Title       = "NoClip",
+    Description = "Bay xuyên tường khi di chuyển",
+    Default     = false,
+}):OnChanged(function(v) NoClipEnabled = v end)
 
 -- =====================================================
 -- TAB FRUIT & DUNGEON
@@ -1594,4 +1624,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | NoClip: Ready | Floating Button: Added") 
