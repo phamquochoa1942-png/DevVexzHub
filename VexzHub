@@ -183,7 +183,7 @@ end)
 print("[Vexz Hub] Auto Random Fruit ready")
 
 -- =====================================================
--- M1 KITSUNE FRUIT - 360° AOE (THÊM MỚI)
+-- M1 KITSUNE FRUIT - 360° AOE
 -- =====================================================
 _G.KitsuneM1 = true
 
@@ -325,6 +325,51 @@ local function FastAttack()
 end
 
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait(0.05) end end)
+
+-- =====================================================
+-- AUTO CLICK M1 (FIX KHÔNG ĐÁNH)
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not _G.FastAttack then return end
+            local char = LP.Character
+            if not char then return end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if not hum then return end
+            
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            
+            local hasEnemy = false
+            local enemies = workspace:FindFirstChild("Enemies")
+            if enemies then
+                for _, v in ipairs(enemies:GetChildren()) do
+                    if v:IsA("Model") then
+                        local eHum = v:FindFirstChildOfClass("Humanoid")
+                        local eRoot = v:FindFirstChild("HumanoidRootPart")
+                        if eHum and eHum.Health > 0 and eRoot then
+                            if (root.Position - eRoot.Position).Magnitude <= 65 then
+                                hasEnemy = true
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if hasEnemy then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool and tool.ToolTip == "Melee" then
+                    tool:Activate()
+                    task.wait(0.05)
+                    tool:Deactivate()
+                end
+            end
+        end)
+    end
+end)
+print("[Vexz Hub] Auto Click M1 enabled")
 
 -- =====================================================
 -- ORIGINAL QUEST DATA
@@ -1110,23 +1155,32 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB
+-- BRING MOB (FIX - HOẠT ĐỘNG VỚI MỌI CHẾ ĐỘ)
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
             if not BringMobEnabled or not FarmPos then return end
-            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            local isFarming = StartFarm or AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri
+            if not isFarming then return end
+            
             local char = LP.Character
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
+            
             local mobNames = {}
-            if StartFarm then local mobName = Mon; if mobName then table.insert(mobNames, mobName) end end
+            if StartFarm then 
+                pcall(function() QuestCheck() end)
+                local mobName = Mon
+                if mobName then table.insert(mobNames, mobName) end
+            end
             if AutoFarmBone then for _, name in ipairs({"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}) do table.insert(mobNames, name) end end
             if AutoFarmCake or AutoFarmCakeQuest then for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}) do table.insert(mobNames, name) end end
             if AutoFarmKatakuri then for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}) do table.insert(mobNames, name) end end
+            
             if #mobNames == 0 then return end
+            
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
@@ -1135,7 +1189,9 @@ task.spawn(function()
                 end
             end
             if hasPlayer then return end
+            
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
+            
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
                 if brought >= MaxBringCount then break end
@@ -1143,11 +1199,14 @@ task.spawn(function()
                 local hum = v:FindFirstChild("Humanoid")
                 local hrp = v:FindFirstChild("HumanoidRootPart")
                 if not hum or hum.Health <= 0 or not hrp then continue end
+                
                 local isValidMob = false
                 for _, name in ipairs(mobNames) do if v.Name == name then isValidMob = true; break end end
                 if not isValidMob then continue end
+                
                 local distToFarm = (hrp.Position - FarmPos).Magnitude
                 local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
+                
                 if distToPlayer <= BringMobRange and distToFarm > 8 then
                     task.spawn(function()
                         pcall(function()
@@ -1257,8 +1316,11 @@ local Tabs = {
 }
 
 -- =====================================================
--- TAB FARM
+-- TAB FARM (SELECT WEAPON LÊN ĐẦU TIÊN)
 -- =====================================================
+Tabs.Farm:AddSection("Weapon")
+Tabs.Farm:AddDropdown("SelectWeapon", {Title = "Select Weapon", Values = {"Melee", "Sword", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedWeapon = v end)
+
 Tabs.Farm:AddSection("Auto Farm Quest")
 Tabs.Farm:AddToggle("StartFarm", {Title = "Start Farm", Description = "Auto Quest + Farm Level", Default = false}):OnChanged(function(v) StartFarm = v end)
 
@@ -1267,9 +1329,6 @@ Tabs.Farm:AddToggle("AutoFarmBone", {Title = "Auto Farm Bone", Default = false})
 Tabs.Farm:AddToggle("AutoFarmCake", {Title = "Auto Farm Cake", Default = false}):OnChanged(function(v) AutoFarmCake = v; if v then AutoFarmBone = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end end)
 Tabs.Farm:AddToggle("AutoFarmCakeQuest", {Title = "Auto Farm Cake (Quest)", Default = false}):OnChanged(function(v) AutoFarmCakeQuest = v; if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmKatakuri = false end end)
 Tabs.Farm:AddToggle("AutoFarmKatakuri", {Title = "Auto Farm Katakuri", Default = false}):OnChanged(function(v) AutoFarmKatakuri = v; if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmCakeQuest = false end end)
-
-Tabs.Farm:AddSection("Weapon")
-Tabs.Farm:AddDropdown("SelectWeapon", {Title = "Select Weapon", Values = {"Melee", "Sword", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedWeapon = v end)
 
 -- =====================================================
 -- TAB SETTINGS
@@ -1346,4 +1405,4 @@ toggleButton.MouseButton1Click:Connect(function() Window:Minimize() end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Kitsune M1: ON | Fast Attack: ON | Auto Farm: Ready | Bring Mob: Ready | Noclip: ON") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Kitsune M1: ON | Auto Click M1: ON | Fast Attack: ON | Bring Mob: FIXED | Noclip: ON") 
