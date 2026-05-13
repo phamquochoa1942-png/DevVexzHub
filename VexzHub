@@ -628,7 +628,9 @@ end
 -- =====================================================
 local StartFarm = false
 local BringMobEnabled = false
-local MaxBringCount = 6  -- TĂNG LÊN 6 MOB MẶC ĐỊNH
+local MaxBringCount = 10
+local BringMobRange = 500
+local BringMobSpeed = 300
 local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
@@ -643,7 +645,7 @@ local AutoFarmCake = false
 local AutoFarmCakeQuest = false
 local AutoFarmKatakuri = false
 
--- Katakuri spots (nhiều bãi quái)
+-- Katakuri spots
 local KatakuriSpots = {
     CFrame.new(-1830, 50, -12660),
     CFrame.new(-1900, 50, -12580),
@@ -654,7 +656,7 @@ local KatakuriSpots = {
 local KatakuriSpotIndex = 1
 
 -- =====================================================
--- TWEEN TO
+-- TWEEN TO (CÓ NOCLIP BAY XUYÊN TƯỜNG)
 -- =====================================================
 local function tweenTo(targetCF, speed)
     speed = speed or 250
@@ -665,9 +667,15 @@ local function tweenTo(targetCF, speed)
     local hum = char:FindFirstChildOfClass("Humanoid")
     workspace.Gravity = 0
     if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; hum.PlatformStand = true; hum.AutoRotate = false end
+    
+    -- NOCLIP: Bay xuyên tường
     for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
+        if p:IsA("BasePart") then 
+            p.CanCollide = false
+            p.CanQuery = false
+        end
     end
+    
     if activeFlyConn then activeFlyConn:Disconnect(); activeFlyConn = nil end
     local arrived = false
     activeFlyConn = RunService.RenderStepped:Connect(function(dt)
@@ -687,7 +695,10 @@ local function tweenTo(targetCF, speed)
     workspace.Gravity = 196.2
     if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false; hum.AutoRotate = true end
     for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide = true end
+        if p:IsA("BasePart") then 
+            p.CanCollide = true
+            p.CanQuery = true
+        end
     end
 end
 
@@ -747,7 +758,7 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- NOFALL HELPER (Dùng cho Bone/Cake/Katakuri)
+-- NOFALL HELPER
 -- =====================================================
 local function startCustomNoFall(mob, checkCondition)
     if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
@@ -792,7 +803,7 @@ local function stopCustomNoFall()
 end
 
 -- =====================================================
--- AUTO FARM BONE (KHÔNG QUEST - NHIỀU BÃI QUÁI)
+-- AUTO FARM BONE
 -- =====================================================
 local BonePos = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
 
@@ -954,7 +965,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- AUTO FARM KATAKURI (NHIỀU BÃI QUÁI - KHÔNG QUEST)
+-- AUTO FARM KATAKURI
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
@@ -1018,7 +1029,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- AUTO FARM CAKE QUEST (CÓ QUEST)
+-- AUTO FARM CAKE QUEST
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
@@ -1102,54 +1113,108 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB (ĐÃ TĂNG CƯỜNG: 10 MOB, KHOẢNG CÁCH 600, HITBOX 80)
+-- BRING MOB (NÂNG CẤP: RANGE + SPEED + 10 MOBS)
 -- =====================================================
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.1) do
         pcall(function()
-            if not BringMobEnabled or not StartFarm or not FarmPos then return end
+            if not BringMobEnabled or not FarmPos then return end
+            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            
             local char = LP.Character
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
             
-            local mobName = Mon
-            if not mobName then
-                pcall(function() QuestCheck() end)
-                mobName = Mon
-            end
-            if not mobName then return end
+            -- Xác định danh sách mob cần gom
+            local mobNames = {}
             
+            if StartFarm then
+                local mobName = Mon
+                if mobName then table.insert(mobNames, mobName) end
+            end
+            
+            if AutoFarmBone then
+                for _, name in ipairs({"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if AutoFarmCake or AutoFarmCakeQuest then
+                for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if AutoFarmKatakuri then
+                for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if #mobNames == 0 then return end
+            
+            -- Kiểm tra người chơi khác
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
                     local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
-                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then hasPlayer = true; break end
+                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then 
+                        hasPlayer = true; break 
+                    end
                 end
             end
             if hasPlayer then return end
 
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
 
+            -- Gom TẤT CẢ mob trong phạm vi BringMobRange
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
                 if brought >= MaxBringCount then break end
                 if not v:IsA("Model") then continue end
+                
                 local hum = v:FindFirstChild("Humanoid")
                 local hrp = v:FindFirstChild("HumanoidRootPart")
                 if not hum or hum.Health <= 0 or not hrp then continue end
-                if v.Name ~= mobName then continue end
-                local dist = (hrp.Position - FarmPos).Magnitude
-                if dist > 3 and dist <= 600 then  -- TĂNG KHOẢNG CÁCH GOM QUÁI
+                
+                -- Kiểm tra mob có trong danh sách không
+                local isValidMob = false
+                for _, name in ipairs(mobNames) do
+                    if v.Name == name then 
+                        isValidMob = true
+                        break 
+                    end
+                end
+                if not isValidMob then continue end
+                
+                local distToFarm = (hrp.Position - FarmPos).Magnitude
+                local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
+                
+                -- Gom mob trong phạm vi BringMobRange và chưa ở gần farm
+                if distToPlayer <= BringMobRange and distToFarm > 8 then
                     task.spawn(function()
                         pcall(function()
-                            if dist > 100 then hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 5, 0)); task.wait(0.03) end  -- TĂNG TỐC ĐỘ GOM
-                            local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(FarmPos)})
-                            hrp.CanCollide = false; hrp.Size = Vector3.new(80, 80, 80)  -- TĂNG HITBOX MOB
-                            hrp.Velocity = Vector3.zero; hrp.AssemblyLinearVelocity = Vector3.zero
-                            hum.WalkSpeed = 0; hum.JumpPower = 0
+                            hrp.CanCollide = false
+                            hrp.Size = Vector3.new(80, 80, 80)
+                            hrp.Velocity = Vector3.zero
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hum.WalkSpeed = 0
+                            hum.JumpPower = 0
                             if v:FindFirstChild("Head") then v.Head.CanCollide = false end
-                            pcall(function() local anim = hum:FindFirstChild("Animator"); if anim then anim:Destroy() end end)
+                            pcall(function() 
+                                local anim = hum:FindFirstChild("Animator")
+                                if anim then anim:Destroy() end 
+                            end)
+                            
+                            -- Tính thời gian Tween dựa trên BringMobSpeed (số càng cao = càng nhanh)
+                            local tweenTime = math.max(0.05, distToFarm / BringMobSpeed)
+                            if tweenTime > 2 then tweenTime = 2 end
+                            
+                            local targetPos = FarmPos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+                            local tween = TweenService:Create(hrp, 
+                                TweenInfo.new(tweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), 
+                                {CFrame = CFrame.new(targetPos)})
                             tween:Play()
                         end)
                     end)
@@ -1266,11 +1331,12 @@ local Window = Fluent:CreateWindow({
 })
 
 local Tabs = {
-    Farm   = Window:AddTab({ Title = "Farm",   Icon = "swords" }),
-    Mob    = Window:AddTab({ Title = "Mob",    Icon = "zap" }),
-    Fruit  = Window:AddTab({ Title = "Fruit & Dungeon", Icon = "cherry" }),
+    Farm     = Window:AddTab({ Title = "Farm",     Icon = "swords" }),
+    Mob      = Window:AddTab({ Title = "Mob",      Icon = "zap" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
+    Fruit    = Window:AddTab({ Title = "Fruit & Dungeon", Icon = "cherry" }),
     LocalPlayer = Window:AddTab({ Title = "LocalPlayer", Icon = "user" }),
-    Misc   = Window:AddTab({ Title = "Misc",   Icon = "settings" }),
+    Misc     = Window:AddTab({ Title = "Misc",     Icon = "settings" }),
 }
 
 -- =====================================================
@@ -1337,21 +1403,74 @@ Tabs.Farm:AddDropdown("SelectWeapon", {
 -- =====================================================
 -- TAB MOB
 -- =====================================================
-Tabs.Mob:AddSection("Bring Mob (Đã Tăng Cường)")
+Tabs.Mob:AddSection("Bring Mob Settings")
 Tabs.Mob:AddParagraph({
     Title = "Thông tin",
-    Content = "Gom tối đa 10 quái về 1 chỗ - Khoảng cách lên đến 600 studs"
+    Content = "Gom quái về vị trí farm - Hoạt động với tất cả chế độ farm"
 })
 
 Tabs.Mob:AddToggle("BringMob", {
-    Title       = "Bring Mob",
-    Description = "Keo quai ve 1 cho (Can bat Start Farm)",
+    Title       = "Bring Mobs",
+    Description = "Bật/Tắt gom quái",
     Default     = false,
 }):OnChanged(function(v) BringMobEnabled = v end)
 
-Tabs.Mob:AddSlider("BringCount", {
-    Title = "Bring Mob Count", Min = 1, Max = 10, Rounding = 1, Default = 6,
+Tabs.Mob:AddSlider("BringMobCount", {
+    Title      = "Bring Mob Count",
+    Description = "Số lượng mob gom cùng lúc",
+    Min        = 1,
+    Max        = 10,
+    Rounding   = 1,
+    Default    = 10,
 }):OnChanged(function(v) MaxBringCount = v end)
+
+-- =====================================================
+-- TAB SETTINGS (BRING MOB + NOCLIP)
+-- =====================================================
+Tabs.Settings:AddSection("Bring Mob Settings")
+Tabs.Settings:AddParagraph({
+    Title = "Cài đặt gom quái",
+    Content = "Tùy chỉnh phạm vi và tốc độ gom quái khi bật Bring Mob"
+})
+
+Tabs.Settings:AddToggle("BringMobSettings", {
+    Title       = "Bring Mobs",
+    Description = "Bật/Tắt gom quái",
+    Default     = false,
+}):OnChanged(function(v) BringMobEnabled = v end)
+
+Tabs.Settings:AddSlider("BringMobCountSettings", {
+    Title      = "Bring Mob Count",
+    Description = "Số mob gom (1-10)",
+    Min        = 1,
+    Max        = 10,
+    Rounding   = 1,
+    Default    = 10,
+}):OnChanged(function(v) MaxBringCount = v end)
+
+Tabs.Settings:AddSlider("BringMobRangeSettings", {
+    Title      = "Bring Mob Range",
+    Description = "Phạm vi gom (studs) - Mặc định: 500",
+    Min        = 500,
+    Max        = 2000,
+    Rounding   = 100,
+    Default    = 500,
+}):OnChanged(function(v) BringMobRange = v end)
+
+Tabs.Settings:AddSlider("BringMobSpeedSettings", {
+    Title      = "Bring Mob Speed",
+    Description = "Tốc độ kéo (studs/giây) - Mặc định: 300",
+    Min        = 300,
+    Max        = 1000,
+    Rounding   = 50,
+    Default    = 300,
+}):OnChanged(function(v) BringMobSpeed = v end)
+
+Tabs.Settings:AddSection("Noclip")
+Tabs.Settings:AddParagraph({
+    Title = "Bay xuyên tường",
+    Content = "Noclip tự động bật khi bay (tweenTo), tự động tắt khi đến nơi"
+})
 
 -- =====================================================
 -- TAB FRUIT & DUNGEON
@@ -1519,5 +1638,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED (10 Mobs/600 Studs) | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
- 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Noclip: ON | Floating Button: Added") 
