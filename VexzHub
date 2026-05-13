@@ -628,7 +628,9 @@ end
 -- =====================================================
 local StartFarm = false
 local BringMobEnabled = false
-local MaxBringCount = 6  -- TĂNG LÊN 6 MOB MẶC ĐỊNH
+local MaxBringCount = 10
+local BringMobRange = 400
+local BringMobSpeed = 0.3
 local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
@@ -643,7 +645,7 @@ local AutoFarmCake = false
 local AutoFarmCakeQuest = false
 local AutoFarmKatakuri = false
 
--- Katakuri spots (nhiều bãi quái)
+-- Katakuri spots
 local KatakuriSpots = {
     CFrame.new(-1830, 50, -12660),
     CFrame.new(-1900, 50, -12580),
@@ -747,7 +749,7 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- NOFALL HELPER (Dùng cho Bone/Cake/Katakuri)
+-- NOFALL HELPER
 -- =====================================================
 local function startCustomNoFall(mob, checkCondition)
     if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
@@ -792,7 +794,7 @@ local function stopCustomNoFall()
 end
 
 -- =====================================================
--- AUTO FARM BONE (KHÔNG QUEST - NHIỀU BÃI QUÁI)
+-- AUTO FARM BONE
 -- =====================================================
 local BonePos = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
 
@@ -954,7 +956,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- AUTO FARM KATAKURI (NHIỀU BÃI QUÁI - KHÔNG QUEST)
+-- AUTO FARM KATAKURI
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
@@ -1018,7 +1020,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- AUTO FARM CAKE QUEST (CÓ QUEST)
+-- AUTO FARM CAKE QUEST
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
@@ -1102,54 +1104,104 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB (ĐÃ TĂNG CƯỜNG: 10 MOB, KHOẢNG CÁCH 600, HITBOX 80)
+-- BRING MOB (HOẠT ĐỘNG VỚI TẤT CẢ MOB)
 -- =====================================================
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.1) do
         pcall(function()
-            if not BringMobEnabled or not StartFarm or not FarmPos then return end
+            if not BringMobEnabled or not FarmPos then return end
+            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            
             local char = LP.Character
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
             
-            local mobName = Mon
-            if not mobName then
-                pcall(function() QuestCheck() end)
-                mobName = Mon
-            end
-            if not mobName then return end
+            -- Xác định danh sách mob cần gom
+            local mobNames = {}
             
+            if StartFarm then
+                local mobName = Mon
+                if mobName then table.insert(mobNames, mobName) end
+            end
+            
+            if AutoFarmBone then
+                for _, name in ipairs({"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if AutoFarmCake or AutoFarmCakeQuest then
+                for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if AutoFarmKatakuri then
+                for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}) do
+                    table.insert(mobNames, name)
+                end
+            end
+            
+            if #mobNames == 0 then return end
+            
+            -- Kiểm tra người chơi khác
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP and p.Character then
                     local pHRP = p.Character:FindFirstChild("HumanoidRootPart")
-                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then hasPlayer = true; break end
+                    if pHRP and (pHRP.Position - myHRP.Position).Magnitude <= 400 then 
+                        hasPlayer = true; break 
+                    end
                 end
             end
             if hasPlayer then return end
 
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
 
+            -- Gom TẤT CẢ mob trong phạm vi BringMobRange
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
                 if brought >= MaxBringCount then break end
                 if not v:IsA("Model") then continue end
+                
                 local hum = v:FindFirstChild("Humanoid")
                 local hrp = v:FindFirstChild("HumanoidRootPart")
                 if not hum or hum.Health <= 0 or not hrp then continue end
-                if v.Name ~= mobName then continue end
-                local dist = (hrp.Position - FarmPos).Magnitude
-                if dist > 3 and dist <= 600 then  -- TĂNG KHOẢNG CÁCH GOM QUÁI
+                
+                -- Kiểm tra mob có trong danh sách không
+                local isValidMob = false
+                for _, name in ipairs(mobNames) do
+                    if v.Name == name then 
+                        isValidMob = true
+                        break 
+                    end
+                end
+                if not isValidMob then continue end
+                
+                local distToFarm = (hrp.Position - FarmPos).Magnitude
+                local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
+                
+                -- Gom mob trong phạm vi và chưa ở gần farm
+                if distToPlayer <= BringMobRange and distToFarm > 8 then
                     task.spawn(function()
                         pcall(function()
-                            if dist > 100 then hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 5, 0)); task.wait(0.03) end  -- TĂNG TỐC ĐỘ GOM
-                            local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(FarmPos)})
-                            hrp.CanCollide = false; hrp.Size = Vector3.new(80, 80, 80)  -- TĂNG HITBOX MOB
-                            hrp.Velocity = Vector3.zero; hrp.AssemblyLinearVelocity = Vector3.zero
-                            hum.WalkSpeed = 0; hum.JumpPower = 0
+                            hrp.CanCollide = false
+                            hrp.Size = Vector3.new(80, 80, 80)
+                            hrp.Velocity = Vector3.zero
+                            hrp.AssemblyLinearVelocity = Vector3.zero
+                            hum.WalkSpeed = 0
+                            hum.JumpPower = 0
                             if v:FindFirstChild("Head") then v.Head.CanCollide = false end
-                            pcall(function() local anim = hum:FindFirstChild("Animator"); if anim then anim:Destroy() end end)
+                            pcall(function() 
+                                local anim = hum:FindFirstChild("Animator")
+                                if anim then anim:Destroy() end 
+                            end)
+                            
+                            local targetPos = FarmPos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+                            local tween = TweenService:Create(hrp, 
+                                TweenInfo.new(BringMobSpeed, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), 
+                                {CFrame = CFrame.new(targetPos)})
                             tween:Play()
                         end)
                     end)
@@ -1276,55 +1328,6 @@ local Tabs = {
 -- =====================================================
 -- TAB FARM
 -- =====================================================
-Tabs.Farm:AddSection("Auto Farm Quest")
-Tabs.Farm:AddToggle("StartFarm", {
-    Title       = "Start Farm",
-    Description = "Auto Quest + Farm Level",
-    Default     = false,
-}):OnChanged(function(v) StartFarm = v end)
-
-Tabs.Farm:AddSection("Auto Farm Đặc Biệt (Không Quest)")
-Tabs.Farm:AddParagraph({
-    Title = "Thông tin",
-    Content = "Các chế độ farm không cần nhận Quest, tự động bay đến bãi quái"
-})
-
-Tabs.Farm:AddToggle("AutoFarmBone", {
-    Title       = "Auto Farm Bone",
-    Description = "Farm Bone (Reborn Skeleton, Living Zombie, Demonic Soul, Posessed Mummy)",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmBone = v 
-    if v then AutoFarmCake = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end
-end)
-
-Tabs.Farm:AddToggle("AutoFarmCake", {
-    Title       = "Auto Farm Cake (Không Quest)",
-    Description = "Farm Cake (Cookie Crafter, Cake Guard, Baking Staff, Head Baker)",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmCake = v 
-    if v then AutoFarmBone = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end
-end)
-
-Tabs.Farm:AddToggle("AutoFarmCakeQuest", {
-    Title       = "Auto Farm Cake (Có Quest)",
-    Description = "Farm Cake có nhận quest (Cookie Crafter, Cake Guard, Baking Staff, Head Baker)",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmCakeQuest = v 
-    if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmKatakuri = false end
-end)
-
-Tabs.Farm:AddToggle("AutoFarmKatakuri", {
-    Title       = "Auto Farm Katakuri",
-    Description = "Farm nhiều bãi quái vùng Katakuri (Cake + Choco) - 5 bãi luân phiên",
-    Default     = false,
-}):OnChanged(function(v) 
-    AutoFarmKatakuri = v 
-    if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmCakeQuest = false end
-end)
-
 Tabs.Farm:AddSection("Select Weapon")
 Tabs.Farm:AddDropdown("SelectWeapon", {
     Title = "Select Weapon",
@@ -1334,24 +1337,96 @@ Tabs.Farm:AddDropdown("SelectWeapon", {
     Multi = false,
 }):OnChanged(function(v) SelectedWeapon = v end)
 
+Tabs.Farm:AddSection("Auto Farm Quest")
+Tabs.Farm:AddToggle("StartFarm", {
+    Title       = "Start Farm",
+    Description = "Auto Quest + Farm Level",
+    Default     = false,
+}):OnChanged(function(v) StartFarm = v end)
+
+Tabs.Farm:AddSection("Auto Farm Đặc Biệt")
+Tabs.Farm:AddParagraph({
+    Title = "Thông tin",
+    Content = "Farm không cần Quest - Chọn 1 trong các chế độ bên dưới"
+})
+
+Tabs.Farm:AddToggle("AutoFarmSpecial", {
+    Title       = "Bật/Tắt Auto Farm Đặc Biệt",
+    Description = "Bật để farm Bone/Cake/Katakuri (không quest)",
+    Default     = false,
+}):OnChanged(function(v) 
+    if not v then
+        AutoFarmBone = false
+        AutoFarmCake = false
+        AutoFarmCakeQuest = false
+        AutoFarmKatakuri = false
+    end
+end)
+
+Tabs.Farm:AddDropdown("SelectFarmSpecial", {
+    Title = "Chọn Khu Vực Farm",
+    Description = "Chọn Bone, Cake hoặc Katakuri",
+    Values = {"Bone", "Cake (Không Quest)", "Cake (Có Quest)", "Katakuri"},
+    Default = "Bone",
+    Multi = false,
+}):OnChanged(function(v)
+    AutoFarmBone = false
+    AutoFarmCake = false
+    AutoFarmCakeQuest = false
+    AutoFarmKatakuri = false
+    
+    if v == "Bone" then
+        AutoFarmBone = true
+    elseif v == "Cake (Không Quest)" then
+        AutoFarmCake = true
+    elseif v == "Cake (Có Quest)" then
+        AutoFarmCakeQuest = true
+    elseif v == "Katakuri" then
+        AutoFarmKatakuri = true
+    end
+end)
+
 -- =====================================================
 -- TAB MOB
 -- =====================================================
-Tabs.Mob:AddSection("Bring Mob (Đã Tăng Cường)")
+Tabs.Mob:AddSection("Bring Mob Settings")
 Tabs.Mob:AddParagraph({
     Title = "Thông tin",
-    Content = "Gom tối đa 10 quái về 1 chỗ - Khoảng cách lên đến 600 studs"
+    Content = "Gom quái về vị trí farm bằng Tween - Hoạt động với tất cả mob"
 })
 
 Tabs.Mob:AddToggle("BringMob", {
     Title       = "Bring Mob",
-    Description = "Keo quai ve 1 cho (Can bat Start Farm)",
+    Description = "Bật/Tắt gom quái (Cần bật Farm)",
     Default     = false,
 }):OnChanged(function(v) BringMobEnabled = v end)
 
 Tabs.Mob:AddSlider("BringCount", {
-    Title = "Bring Mob Count", Min = 1, Max = 10, Rounding = 1, Default = 6,
+    Title   = "Bring Mob Count",
+    Description = "Số lượng mob gom cùng lúc",
+    Min     = 1,
+    Max     = 15,
+    Rounding = 1,
+    Default = 10,
 }):OnChanged(function(v) MaxBringCount = v end)
+
+Tabs.Mob:AddSlider("BringRange", {
+    Title   = "Bring Mob Range",
+    Description = "Phạm vi gom quái (studs)",
+    Min     = 100,
+    Max     = 800,
+    Rounding = 50,
+    Default = 400,
+}):OnChanged(function(v) BringMobRange = v end)
+
+Tabs.Mob:AddSlider("BringSpeed", {
+    Title   = "Bring Mob Speed",
+    Description = "Tốc độ kéo quái (giây)",
+    Min     = 0.1,
+    Max     = 1,
+    Rounding = 1,
+    Default = 0.3,
+}):OnChanged(function(v) BringMobSpeed = v end)
 
 -- =====================================================
 -- TAB FRUIT & DUNGEON
@@ -1519,4 +1594,4 @@ end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED (10 Mobs/600 Studs) | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Select Weapon: Ready | Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: ENHANCED | Auto Stats: Ready | Auto Random Fruit: Ready | Auto Farm Bone/Cake/Katakuri: Ready | Floating Button: Added") 
