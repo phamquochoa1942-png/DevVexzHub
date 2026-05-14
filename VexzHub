@@ -327,16 +327,18 @@ end
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait(0.05) end end)
 
 -- =====================================================
--- AUTO CLICK M1 (FIX KHÔNG ĐÁNH)
+-- AUTO CLICK M1
 -- =====================================================
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.08) do
         pcall(function()
             if not _G.FastAttack then return end
+            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            
             local char = LP.Character
             if not char then return end
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if not hum then return end
+            if not hum or hum.Health <= 0 then return end
             
             local root = char:FindFirstChild("HumanoidRootPart")
             if not root then return end
@@ -349,7 +351,7 @@ task.spawn(function()
                         local eHum = v:FindFirstChildOfClass("Humanoid")
                         local eRoot = v:FindFirstChild("HumanoidRootPart")
                         if eHum and eHum.Health > 0 and eRoot then
-                            if (root.Position - eRoot.Position).Magnitude <= 65 then
+                            if (root.Position - eRoot.Position).Magnitude <= 25 then
                                 hasEnemy = true
                                 break
                             end
@@ -360,10 +362,22 @@ task.spawn(function()
             
             if hasEnemy then
                 local tool = char:FindFirstChildOfClass("Tool")
-                if tool and tool.ToolTip == "Melee" then
-                    tool:Activate()
-                    task.wait(0.05)
-                    tool:Deactivate()
+                if tool then
+                    if tool.ToolTip == "Melee" or tool:FindFirstChild("RemoteFunction") then
+                        tool:Activate()
+                    end
+                else
+                    local backpack = LP.Backpack
+                    local meleeTool = nil
+                    for _, t in ipairs(backpack:GetChildren()) do
+                        if t:IsA("Tool") and t.ToolTip == "Melee" then
+                            meleeTool = t
+                            break
+                        end
+                    end
+                    if meleeTool then
+                        hum:EquipTool(meleeTool)
+                    end
                 end
             end
         end)
@@ -1155,12 +1169,12 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB (FIX - HOẠT ĐỘNG VỚI MỌI CHẾ ĐỘ)
+-- BRING MOB (FIX HOÀN TOÀN - QUÉT TỪ VỊ TRÍ NGƯỜI CHƠI)
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
-            if not BringMobEnabled or not FarmPos then return end
+            if not BringMobEnabled then return end
             local isFarming = StartFarm or AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri
             if not isFarming then return end
             
@@ -1168,6 +1182,12 @@ task.spawn(function()
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
+            
+            -- Lấy vị trí cần gom: ưu tiên FarmPos, nếu không có thì dùng vị trí người chơi
+            local targetFarmPos = FarmPos
+            if not targetFarmPos then
+                targetFarmPos = myHRP.Position
+            end
             
             local mobNames = {}
             if StartFarm then 
@@ -1204,10 +1224,10 @@ task.spawn(function()
                 for _, name in ipairs(mobNames) do if v.Name == name then isValidMob = true; break end end
                 if not isValidMob then continue end
                 
-                local distToFarm = (hrp.Position - FarmPos).Magnitude
+                local distToFarm = (hrp.Position - targetFarmPos).Magnitude
                 local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
                 
-                if distToPlayer <= BringMobRange and distToFarm > 8 then
+                if distToPlayer <= BringMobRange and distToFarm > 5 then
                     task.spawn(function()
                         pcall(function()
                             hrp.CanCollide = false; hrp.Size = Vector3.new(80, 80, 80)
@@ -1217,7 +1237,7 @@ task.spawn(function()
                             pcall(function() local anim = hum:FindFirstChild("Animator"); if anim then anim:Destroy() end end)
                             local tweenTime = math.max(0.05, distToFarm / BringMobSpeed)
                             if tweenTime > 2 then tweenTime = 2 end
-                            local targetPos = FarmPos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+                            local targetPos = targetFarmPos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
                             local tween = TweenService:Create(hrp, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
                             tween:Play()
                         end)
@@ -1295,7 +1315,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
--- FLUENT UI (NHỎ HƠN)
+-- FLUENT UI
 -- =====================================================
 local Window = Fluent:CreateWindow({
     Title       = "Vexz Hub",
@@ -1309,14 +1329,14 @@ local Window = Fluent:CreateWindow({
 
 local Tabs = {
     Farm     = Window:AddTab({ Title = "Farm",     Icon = "swords" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
     Fruit    = Window:AddTab({ Title = "Fruit",    Icon = "cherry" }),
     Player   = Window:AddTab({ Title = "Player",   Icon = "user" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
     Misc     = Window:AddTab({ Title = "Misc",     Icon = "list" }),
 }
 
 -- =====================================================
--- TAB FARM (SELECT WEAPON LÊN ĐẦU TIÊN)
+-- TAB FARM
 -- =====================================================
 Tabs.Farm:AddSection("Weapon")
 Tabs.Farm:AddDropdown("SelectWeapon", {Title = "Select Weapon", Values = {"Melee", "Sword", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedWeapon = v end)
@@ -1331,18 +1351,6 @@ Tabs.Farm:AddToggle("AutoFarmCakeQuest", {Title = "Auto Farm Cake (Quest)", Defa
 Tabs.Farm:AddToggle("AutoFarmKatakuri", {Title = "Auto Farm Katakuri", Default = false}):OnChanged(function(v) AutoFarmKatakuri = v; if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmCakeQuest = false end end)
 
 -- =====================================================
--- TAB SETTINGS
--- =====================================================
-Tabs.Settings:AddSection("Bring Mob")
-Tabs.Settings:AddToggle("BringMob", {Title = "Bring Mobs", Default = false}):OnChanged(function(v) BringMobEnabled = v end)
-Tabs.Settings:AddSlider("BringCount", {Title = "Count", Min = 1, Max = 10, Default = 10, Rounding = 1}):OnChanged(function(v) MaxBringCount = v end)
-Tabs.Settings:AddSlider("BringRange", {Title = "Range (studs)", Min = 500, Max = 2000, Default = 500, Rounding = 100}):OnChanged(function(v) BringMobRange = v end)
-Tabs.Settings:AddSlider("BringSpeed", {Title = "Speed", Min = 300, Max = 1000, Default = 300, Rounding = 50}):OnChanged(function(v) BringMobSpeed = v end)
-
-Tabs.Settings:AddSection("Noclip")
-Tabs.Settings:AddParagraph({Title = "Info", Content = "Noclip tự động bật khi bay"})
-
--- =====================================================
 -- TAB FRUIT
 -- =====================================================
 Tabs.Fruit:AddSection("Auto Random Fruit")
@@ -1354,6 +1362,27 @@ Tabs.Fruit:AddToggle("AutoRandomFruit", {Title = "Auto Random Fruit", Default = 
 Tabs.Player:AddSection("Auto Stats")
 Tabs.Player:AddToggle("AutoStats", {Title = "Auto Stats", Default = false}):OnChanged(function(v) AutoStatsEnabled = v end)
 Tabs.Player:AddDropdown("SelectStat", {Title = "Select Stat", Values = {"Melee", "Defense", "Sword", "Gun", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedStat = v end)
+
+-- =====================================================
+-- TAB SETTINGS (CUỐI CÙNG)
+-- =====================================================
+Tabs.Settings:AddSection("Bring Mob")
+Tabs.Settings:AddToggle("BringMob", {Title = "Bring Mobs", Default = false}):OnChanged(function(v) BringMobEnabled = v end)
+Tabs.Settings:AddSlider("BringCount", {Title = "Count", Min = 1, Max = 10, Default = 10, Rounding = 1}):OnChanged(function(v) MaxBringCount = v end)
+
+Tabs.Settings:AddDropdown("BringRange", {Title = "Bring Range", Values = {"500 studs", "800 studs", "1000 studs", "1500 studs", "2000 studs"}, Default = "500 studs", Multi = false}):OnChanged(function(v) BringMobRange = tonumber(v:match("%d+")) end)
+
+Tabs.Settings:AddDropdown("BringSpeed", {Title = "Bring Speed", Values = {"Rất Nhanh (500)", "Nhanh (400)", "Vừa (300)", "Chậm (200)", "Rất Chậm (100)"}, Default = "Vừa (300)", Multi = false}):OnChanged(function(v) 
+    if v == "Rất Nhanh (500)" then BringMobSpeed = 500
+    elseif v == "Nhanh (400)" then BringMobSpeed = 400
+    elseif v == "Vừa (300)" then BringMobSpeed = 300
+    elseif v == "Chậm (200)" then BringMobSpeed = 200
+    elseif v == "Rất Chậm (100)" then BringMobSpeed = 100
+    end
+end)
+
+Tabs.Settings:AddSection("Noclip")
+Tabs.Settings:AddParagraph({Title = "Info", Content = "Noclip tự động bật khi bay"})
 
 -- =====================================================
 -- TAB MISC
