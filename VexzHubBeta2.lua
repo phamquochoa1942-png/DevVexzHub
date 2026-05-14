@@ -65,7 +65,202 @@ elseif PlaceId == 7449423635 then World3 = true
 end
 
 -- =====================================================
--- FAST ATTACK (FIX: Tăng tốc độ đánh - delay 0.05)
+-- ANTI AFK
+-- =====================================================
+local VirtualUser = game:GetService("VirtualUser")
+LP.Idled:Connect(function()
+    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+    wait(1)
+    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+end)
+print("[Vexz Hub] Anti AFK enabled")
+
+-- =====================================================
+-- AUTO BUSO HAKI
+-- =====================================================
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local char = LP.Character
+            if char and not char:FindFirstChild("HasBuso") then
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
+            end
+        end)
+    end
+end)
+print("[Vexz Hub] Auto Buso Haki enabled")
+
+-- =====================================================
+-- SELECT WEAPON
+-- =====================================================
+local SelectedWeapon = "Melee"
+
+local function equipWeapon()
+    local char = LP.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    
+    local backpack = LP.Backpack
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            if SelectedWeapon == "Melee" and tool.ToolTip == "Melee" then
+                hum:EquipTool(tool)
+                break
+            elseif SelectedWeapon == "Sword" and tool.ToolTip == "Sword" then
+                hum:EquipTool(tool)
+                break
+            elseif SelectedWeapon == "Blox Fruit" and tool.ToolTip == "Blox Fruit" then
+                hum:EquipTool(tool)
+                break
+            end
+        end
+    end
+end
+print("[Vexz Hub] Auto Equip Weapon ready")
+
+-- =====================================================
+-- AUTO STATS
+-- =====================================================
+local AutoStatsEnabled = false
+local SelectedStat = "Melee"
+
+local function getStatRemote()
+    return ReplicatedStorage.Remotes.CommF_
+end
+
+local function autoStatsFunction()
+    if not AutoStatsEnabled then return end
+    
+    pcall(function()
+        local statRemote = getStatRemote()
+        if not statRemote then return end
+        
+        local args = {
+            [1] = "AddPoint",
+            [2] = SelectedStat,
+            [3] = 1
+        }
+        
+        statRemote:InvokeServer(unpack(args))
+    end)
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if AutoStatsEnabled then
+            pcall(autoStatsFunction)
+        end
+    end
+end)
+print("[Vexz Hub] Auto Stats ready")
+
+-- =====================================================
+-- AUTO RANDOM FRUIT
+-- =====================================================
+local AutoRandomFruitEnabled = false
+
+local function randomFruitFunction()
+    if not AutoRandomFruitEnabled then return end
+    
+    pcall(function()
+        local args = {
+            [1] = "Cousin",
+            [2] = "Buy"
+        }
+        
+        ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args))
+    end)
+end
+
+task.spawn(function()
+    while task.wait(2.5) do
+        if AutoRandomFruitEnabled then
+            pcall(randomFruitFunction)
+        end
+    end
+end)
+print("[Vexz Hub] Auto Random Fruit ready")
+
+-- =====================================================
+-- M1 KITSUNE FRUIT - 360° AOE
+-- =====================================================
+_G.KitsuneM1 = true
+
+local vector_create = Vector3.new
+local math_rad = math.rad
+local math_random = math.random
+
+local M1_RANGE = 800
+local M1_MAX_MOBS = 5
+
+local function FireKitsuneM1(direction)
+    local char = LP.Character
+    if not char then return end
+    local fruit = char:FindFirstChild("Kitsune-Kitsune")
+    if not fruit then return end
+    local remote = fruit:FindFirstChild("LeftClickRemote")
+    if not remote then return end
+    
+    local args = {
+        vector_create(direction.X, direction.Y, direction.Z),
+        math_random(1, 4),
+        true
+    }
+    pcall(function() remote:FireServer(unpack(args)) end)
+end
+
+local m1_angle = 0
+local m1_frame = 0
+
+task.spawn(function()
+    while _G.KitsuneM1 do
+        m1_frame += 1
+        local char = LP.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local pivot = char:GetPivot()
+                
+                if m1_frame % 2 == 0 then
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if enemies then
+                        local list = {}
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local er = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and er then
+                                    local dist = (root.Position - er.Position).Magnitude
+                                    if dist <= M1_RANGE then
+                                        list[#list + 1] = er
+                                    end
+                                end
+                            end
+                        end
+                        table.sort(list, function(a, b) return (root.Position - a.Position).Magnitude < (root.Position - b.Position).Magnitude end)
+                        for i = 1, math.min(#list, M1_MAX_MOBS) do
+                            local dir = (list[i].Position - root.Position).Unit * M1_RANGE
+                            FireKitsuneM1(dir)
+                        end
+                    end
+                end
+                
+                for i = 0, 7 do
+                    local rad = math_rad(m1_angle + i * 45)
+                    local dir = (pivot.LookVector * math.cos(rad) + pivot.RightVector * math.sin(rad)) * M1_RANGE
+                    FireKitsuneM1(dir)
+                end
+                m1_angle = (m1_angle + 20) % 360
+            end
+        end
+        task.wait(0.02)
+    end
+end)
+print("[Kitsune M1] ON | 360° AOE | Fix Lag")
+
+-- =====================================================
+-- FAST ATTACK
 -- =====================================================
 _G.FastAttack = true
 
@@ -129,20 +324,75 @@ local function FastAttack()
     end
 end
 
--- FIX: Tăng tốc độ đánh từ task.wait() xuống task.wait(0.05)
 task.spawn(function() while _G.FastAttack do pcall(FastAttack) task.wait(0.05) end end)
 
 -- =====================================================
--- ORIGINAL QUEST DATA (FIX: Level 1-9 Bandit)
+-- AUTO CLICK M1
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.08) do
+        pcall(function()
+            if not _G.FastAttack then return end
+            if not StartFarm and not AutoFarmBone and not AutoFarmCake and not AutoFarmCakeQuest and not AutoFarmKatakuri then return end
+            
+            local char = LP.Character
+            if not char then return end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if not hum or hum.Health <= 0 then return end
+            
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            
+            local hasEnemy = false
+            local enemies = workspace:FindFirstChild("Enemies")
+            if enemies then
+                for _, v in ipairs(enemies:GetChildren()) do
+                    if v:IsA("Model") then
+                        local eHum = v:FindFirstChildOfClass("Humanoid")
+                        local eRoot = v:FindFirstChild("HumanoidRootPart")
+                        if eHum and eHum.Health > 0 and eRoot then
+                            if (root.Position - eRoot.Position).Magnitude <= 25 then
+                                hasEnemy = true
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if hasEnemy then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    if tool.ToolTip == "Melee" or tool:FindFirstChild("RemoteFunction") then
+                        tool:Activate()
+                    end
+                else
+                    local backpack = LP.Backpack
+                    local meleeTool = nil
+                    for _, t in ipairs(backpack:GetChildren()) do
+                        if t:IsA("Tool") and t.ToolTip == "Melee" then
+                            meleeTool = t
+                            break
+                        end
+                    end
+                    if meleeTool then
+                        hum:EquipTool(meleeTool)
+                    end
+                end
+            end
+        end)
+    end
+end)
+print("[Vexz Hub] Auto Click M1 enabled")
+
+-- =====================================================
+-- ORIGINAL QUEST DATA
 -- =====================================================
 QuestCheck = function()
     local I = game.Players.LocalPlayer.Data.Level.Value
     if World1 then
         if I == 1 or I <= 9 then
-            Mon = "Bandit"
-            Qdata = 1
-            Qname = "BanditQuest1"
-            NameMon = "Bandit"
+            Mon = "Bandit"; Qdata = 1; Qname = "BanditQuest1"; NameMon = "Bandit"
             PosM = CFrame.new(1045.9626464844, 27.002508163452, 1560.8203125)
             PosQ = CFrame.new(1059.37195, 15.4495068, 1550.4231, 0.939700544, -0, -0.341998369, 0, 1, -0, 0.341998369, 0, 0.939700544)
         elseif I == 10 or I <= 14 then
@@ -514,7 +764,8 @@ end
 -- =====================================================
 local StartFarm = false
 local BringMobEnabled = false
-local MaxBringCount = 2
+local BringMobRange = 500
+local BringMobSpeed = 300
 local FarmPos = nil
 local CurrentMob = nil
 local activeFlyConn = nil
@@ -522,7 +773,24 @@ local noFallConn = nil
 local LastQuestLevel = 0
 
 -- =====================================================
--- TWEEN TO
+-- AUTO FARM STATE
+-- =====================================================
+local AutoFarmBone = false
+local AutoFarmCake = false
+local AutoFarmCakeQuest = false
+local AutoFarmKatakuri = false
+
+local KatakuriSpots = {
+    CFrame.new(-1830, 50, -12660),
+    CFrame.new(-1900, 50, -12580),
+    CFrame.new(-1780, 50, -12550),
+    CFrame.new(-1860, 50, -12480),
+    CFrame.new(-1750, 50, -12600),
+}
+local KatakuriSpotIndex = 1
+
+-- =====================================================
+-- TWEEN TO (CÓ NOCLIP)
 -- =====================================================
 local function tweenTo(targetCF, speed)
     speed = speed or 250
@@ -533,9 +801,11 @@ local function tweenTo(targetCF, speed)
     local hum = char:FindFirstChildOfClass("Humanoid")
     workspace.Gravity = 0
     if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; hum.PlatformStand = true; hum.AutoRotate = false end
+    
     for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
+        if p:IsA("BasePart") then p.CanCollide = false; p.CanQuery = false end
     end
+    
     if activeFlyConn then activeFlyConn:Disconnect(); activeFlyConn = nil end
     local arrived = false
     activeFlyConn = RunService.RenderStepped:Connect(function(dt)
@@ -555,7 +825,7 @@ local function tweenTo(targetCF, speed)
     workspace.Gravity = 196.2
     if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false; hum.AutoRotate = true end
     for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") then p.CanCollide = true end
+        if p:IsA("BasePart") then p.CanCollide = true; p.CanQuery = true end
     end
 end
 
@@ -615,23 +885,319 @@ local function GetNearestMob(TargetName)
 end
 
 -- =====================================================
--- BRING MOB (FIX: Kết hợp StartFarm)
+-- NOFALL HELPER
+-- =====================================================
+local function startCustomNoFall(mob, checkCondition)
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = 0
+    noFallConn = RunService.RenderStepped:Connect(function()
+        if not checkCondition() then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        local c = LP.Character
+        if not c then return end
+        local r = c:FindFirstChild("HumanoidRootPart")
+        if not mob or not mob.Parent then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        local mr = mob:FindFirstChild("HumanoidRootPart")
+        local mh = mob:FindFirstChildOfClass("Humanoid")
+        if not mr or not mh or mh.Health <= 0 then
+            if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+            workspace.Gravity = 196.2
+            return
+        end
+        if r then
+            r.CFrame = mr.CFrame * CFrame.new(0, 15, 0)
+            r.Velocity = Vector3.zero
+            r.AssemblyLinearVelocity = Vector3.zero
+        end
+    end)
+end
+
+local function stopCustomNoFall()
+    if noFallConn then noFallConn:Disconnect(); noFallConn = nil end
+    workspace.Gravity = 196.2
+    local c = LP.Character
+    if c then
+        local hum = c:FindFirstChildOfClass("Humanoid")
+        if hum then hum.WalkSpeed = 16; hum.JumpPower = 50; hum.PlatformStand = false end
+    end
+end
+
+-- =====================================================
+-- AUTO FARM BONE
+-- =====================================================
+local BonePos = CFrame.new(-9516.9931640625, 172.01718139648438, 6078.46533203125)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmBone then return end
+            if StartFarm then return end
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            equipWeapon()
+            local hasQuest = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then hasQuest = true end
+                end
+            end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
+            local boneMobs = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
+            local mob = nil
+            for _, name in ipairs(boneMobs) do mob = GetNearestMob(name); if mob then break end end
+            if not mob then
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, name in ipairs(boneMobs) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300); mob = v; break
+                                end
+                            end
+                        end
+                        if mob then break end
+                    end
+                end
+                if not mob then tweenTo(BonePos, 250) end
+                task.wait(0.5)
+                for _, name in ipairs(boneMobs) do mob = GetNearestMob(name); if mob then break end end
+            end
+            if not mob then task.wait(0.5); return end
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            startCustomNoFall(mob, function() return AutoFarmBone end)
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmBone
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+-- =====================================================
+-- AUTO FARM CAKE (KHÔNG QUEST)
+-- =====================================================
+local CakePos = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmCake then return end
+            if StartFarm then return end
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            equipWeapon()
+            local hasQuest = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then hasQuest = true end
+                end
+            end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
+            local cakeMobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+            local mob = nil
+            for _, name in ipairs(cakeMobs) do mob = GetNearestMob(name); if mob then break end end
+            if not mob then
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, name in ipairs(cakeMobs) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300); mob = v; break
+                                end
+                            end
+                        end
+                        if mob then break end
+                    end
+                end
+                if not mob then tweenTo(CakePos, 250) end
+                task.wait(0.5)
+                for _, name in ipairs(cakeMobs) do mob = GetNearestMob(name); if mob then break end end
+            end
+            if not mob then task.wait(0.5); return end
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            startCustomNoFall(mob, function() return AutoFarmCake end)
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmCake
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+-- =====================================================
+-- AUTO FARM KATAKURI
 -- =====================================================
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.1) do
         pcall(function()
-            if not BringMobEnabled or not StartFarm or not FarmPos then return end
+            if not AutoFarmKatakuri then return end
+            if StartFarm then return end
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            equipWeapon()
+            local hasQuest = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then hasQuest = true end
+                end
+            end)
+            if hasQuest then pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end) task.wait(0.3) end
+            local katakuriMobs = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}
+            local mob = nil
+            for _, name in ipairs(katakuriMobs) do mob = GetNearestMob(name); if mob then break end end
+            if not mob then
+                local spot = KatakuriSpots[KatakuriSpotIndex]
+                tweenTo(spot, 250)
+                KatakuriSpotIndex = KatakuriSpotIndex % #KatakuriSpots + 1
+                task.wait(0.5)
+                for _, name in ipairs(katakuriMobs) do mob = GetNearestMob(name); if mob then break end end
+            end
+            if not mob then task.wait(0.5); return end
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            startCustomNoFall(mob, function() return AutoFarmKatakuri end)
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmKatakuri
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+-- =====================================================
+-- AUTO FARM CAKE QUEST
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not AutoFarmCakeQuest then return end
+            if StartFarm then return end
+            local char = LP.Character
+            if not char then return end
+            if not char:FindFirstChild("HumanoidRootPart") then return end
+            equipWeapon()
+            local questVisible = false
+            pcall(function()
+                local main = LP.PlayerGui:FindFirstChild("Main")
+                if main then local qFrame = main:FindFirstChild("Quest")
+                    if qFrame and qFrame.Visible then questVisible = true end
+                end
+            end)
+            if not questVisible then
+                local cakeQuestPos = CFrame.new(-2021.320068359375, 37.79822540283203, -12028.7294921875)
+                tweenTo(cakeQuestPos, 250)
+                task.wait(0.5)
+                pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", "CakeQuest1", 1) end)
+                task.wait(0.5)
+            end
+            local mobNames = {"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}
+            local mob = nil
+            for _, name in ipairs(mobNames) do mob = GetNearestMob(name); if mob then break end end
+            if not mob then
+                local enemies = workspace:FindFirstChild("Enemies")
+                if enemies then
+                    for _, name in ipairs(mobNames) do
+                        for _, v in ipairs(enemies:GetChildren()) do
+                            if v:IsA("Model") and v.Name == name then
+                                local hum = v:FindFirstChildOfClass("Humanoid")
+                                local hrp = v:FindFirstChild("HumanoidRootPart")
+                                if hum and hum.Health > 0 and hrp then
+                                    tweenTo(hrp.CFrame * CFrame.new(0, 15, 0), 300); mob = v; break
+                                end
+                            end
+                        end
+                        if mob then break end
+                    end
+                end
+                if not mob then tweenTo(CFrame.new(-2021, 37, -12200), 250) end
+                task.wait(0.5)
+            end
+            if not mob then task.wait(0.5); return end
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+            if not mobRoot then return end
+            FarmPos = mobRoot.Position
+            tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
+            startCustomNoFall(mob, function() return AutoFarmCakeQuest end)
+            repeat task.wait(0.1)
+                if not mob or not mob.Parent then break end
+                local mh = mob:FindFirstChildOfClass("Humanoid")
+                if not mh or mh.Health <= 0 then break end
+                if mob:FindFirstChild("HumanoidRootPart") then FarmPos = mob.HumanoidRootPart.Position end
+            until not AutoFarmCakeQuest
+            stopCustomNoFall()
+        end)
+    end
+end)
+
+print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
+
+-- =====================================================
+-- BRING MOB (MẶC ĐỊNH 10 CON - KHÔNG CẦN FARMPOS)
+-- =====================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if not BringMobEnabled then return end
+            local isFarming = StartFarm or AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri
+            if not isFarming then return end
+            
             local char = LP.Character
             if not char then return end
             local myHRP = char:FindFirstChild("HumanoidRootPart")
             if not myHRP then return end
             
-            local mobName = Mon
-            if not mobName then
-                pcall(function() QuestCheck() end)
-                mobName = Mon
+            local targetFarmPos = FarmPos
+            if not targetFarmPos then
+                targetFarmPos = myHRP.Position
             end
-            if not mobName then return end
+            
+            local mobNames = {}
+            if StartFarm then 
+                pcall(function() QuestCheck() end)
+                local mobName = Mon
+                if mobName then table.insert(mobNames, mobName) end
+            end
+            if AutoFarmBone then for _, name in ipairs({"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}) do table.insert(mobNames, name) end end
+            if AutoFarmCake or AutoFarmCakeQuest then for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker"}) do table.insert(mobNames, name) end end
+            if AutoFarmKatakuri then for _, name in ipairs({"Cookie Crafter", "Cake Guard", "Baking Staff", "Head Baker", "Cocoa Warrior", "Chocolate Bar Battler", "Sweet Thief", "Candy Rebel"}) do table.insert(mobNames, name) end end
+            
+            if #mobNames == 0 then return end
             
             local hasPlayer = false
             for _, p in ipairs(Players:GetPlayers()) do
@@ -641,32 +1207,40 @@ task.spawn(function()
                 end
             end
             if hasPlayer then return end
-
+            
             pcall(function() sethiddenproperty(LP, "SimulationRadius", math.huge) end)
-
+            
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                if brought >= MaxBringCount then break end
+                if brought >= 10 then break end
                 if not v:IsA("Model") then continue end
                 local hum = v:FindFirstChild("Humanoid")
                 local hrp = v:FindFirstChild("HumanoidRootPart")
                 if not hum or hum.Health <= 0 or not hrp then continue end
-                if v.Name ~= mobName then continue end
-                local dist = (hrp.Position - FarmPos).Magnitude
-                if dist > 8 and dist <= 350 then
+                
+                local isValidMob = false
+                for _, name in ipairs(mobNames) do if v.Name == name then isValidMob = true; break end end
+                if not isValidMob then continue end
+                
+                local distToFarm = (hrp.Position - targetFarmPos).Magnitude
+                local distToPlayer = (hrp.Position - myHRP.Position).Magnitude
+                
+                if distToPlayer <= BringMobRange and distToFarm > 10 then
+                    brought = brought + 1
                     task.spawn(function()
                         pcall(function()
-                            if dist > 150 then hrp.CFrame = CFrame.new(FarmPos + Vector3.new(0, 3, 0)); task.wait(0.05) end
-                            local tween = TweenService:Create(hrp, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(FarmPos)})
-                            hrp.CanCollide = false; hrp.Size = Vector3.new(60, 60, 60)
+                            hrp.CanCollide = false; hrp.Size = Vector3.new(80, 80, 80)
                             hrp.Velocity = Vector3.zero; hrp.AssemblyLinearVelocity = Vector3.zero
                             hum.WalkSpeed = 0; hum.JumpPower = 0
                             if v:FindFirstChild("Head") then v.Head.CanCollide = false end
                             pcall(function() local anim = hum:FindFirstChild("Animator"); if anim then anim:Destroy() end end)
+                            local tweenTime = math.max(0.05, distToFarm / BringMobSpeed)
+                            if tweenTime > 2 then tweenTime = 2 end
+                            local targetPos = targetFarmPos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+                            local tween = TweenService:Create(hrp, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {CFrame = CFrame.new(targetPos)})
                             tween:Play()
                         end)
                     end)
-                    brought = brought + 1
                 end
             end
         end)
@@ -681,21 +1255,18 @@ task.spawn(function()
         task.wait(0.2)
         if not StartFarm then
             if CurrentMob then stopNoFall(); CurrentMob = nil end
-            LastQuestLevel = 0
-            continue
+            LastQuestLevel = 0; continue
         end
-
+        if AutoFarmBone or AutoFarmCake or AutoFarmCakeQuest or AutoFarmKatakuri then continue end
+        equipWeapon()
         local currentLevel = LP.Data.Level.Value
-
         pcall(function() QuestCheck() end)
         local qName = Qname; local qLevel = Qdata; local qPos = PosQ; local mPos = PosM; local mobName = Mon; local nameMon = NameMon
         if not qName or not qPos or not mobName then task.wait(1); continue end
-
         local questVisible, questTitle = false, ""
         pcall(function()
             local main = LP.PlayerGui:FindFirstChild("Main")
-            if main then
-                local qFrame = main:FindFirstChild("Quest")
+            if main then local qFrame = main:FindFirstChild("Quest")
                 if qFrame then
                     questVisible = qFrame.Visible
                     for _, v in ipairs(qFrame:GetDescendants()) do
@@ -704,59 +1275,39 @@ task.spawn(function()
                 end
             end
         end)
-
         if questVisible and questTitle ~= "" and LastQuestLevel > 0 then
             if currentLevel ~= LastQuestLevel then
                 if not questTitle:find(nameMon) then
                     pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
                     task.wait(0.5); questVisible = false; LastQuestLevel = 0
-                else
-                    LastQuestLevel = currentLevel
-                end
+                else LastQuestLevel = currentLevel end
             end
         end
-
         if not questVisible then
             tweenTo(qPos, 250); task.wait(0.5)
             pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", qName, qLevel) end)
-            task.wait(0.5)
-            LastQuestLevel = currentLevel
+            task.wait(0.5); LastQuestLevel = currentLevel
             if mPos then tweenTo(mPos, 300); task.wait(0.3) end
             continue
         end
-
         if LastQuestLevel == 0 then LastQuestLevel = currentLevel end
-
         if CurrentMob then
             local mh = CurrentMob:FindFirstChildOfClass("Humanoid")
-            if not CurrentMob.Parent or not mh or mh.Health <= 0 then
-                stopNoFall(); CurrentMob = nil
-                LastQuestLevel = 0
-            end
+            if not CurrentMob.Parent or not mh or mh.Health <= 0 then stopNoFall(); CurrentMob = nil; LastQuestLevel = 0 end
         end
-
         if not CurrentMob then CurrentMob = GetNearestMob(mobName) end
-
-        if not CurrentMob then
-            if mPos then tweenTo(mPos, 200) end
-            task.wait(0.5); continue
-        end
-
+        if not CurrentMob then if mPos then tweenTo(mPos, 200) end; task.wait(0.5); continue end
         local mobRoot = CurrentMob:FindFirstChild("HumanoidRootPart")
         if not mobRoot then CurrentMob = nil; continue end
-
         FarmPos = mobRoot.Position
         tweenTo(mobRoot.CFrame * CFrame.new(0, 15, 0), 300)
         startNoFall(CurrentMob)
-
-        repeat
-            task.wait(0.1)
+        repeat task.wait(0.1)
             if not CurrentMob or not CurrentMob.Parent then break end
             local mh2 = CurrentMob:FindFirstChildOfClass("Humanoid")
             if not mh2 or mh2.Health <= 0 then break end
             if CurrentMob:FindFirstChild("HumanoidRootPart") then FarmPos = CurrentMob.HumanoidRootPart.Position end
         until not StartFarm
-
         stopNoFall(); CurrentMob = nil
     end
 end)
@@ -767,47 +1318,75 @@ end)
 local Window = Fluent:CreateWindow({
     Title       = "Vexz Hub",
     SubTitle    = "Blox Fruit",
-    TabWidth    = 160,
-    Size        = UDim2.fromOffset(580, 440),
+    TabWidth    = 120,
+    Size        = UDim2.fromOffset(460, 340),
     Acrylic     = true,
     Theme       = "Pink",
     MinimizeKey = Enum.KeyCode.RightShift,
 })
 
 local Tabs = {
-    Farm   = Window:AddTab({ Title = "Farm",   Icon = "swords" }),
-    Mob    = Window:AddTab({ Title = "Mob",    Icon = "zap" }),
-    Misc   = Window:AddTab({ Title = "Misc",   Icon = "settings" }),
+    Farm     = Window:AddTab({ Title = "Farm",     Icon = "swords" }),
+    Fruit    = Window:AddTab({ Title = "Fruit",    Icon = "cherry" }),
+    Player   = Window:AddTab({ Title = "Player",   Icon = "user" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }),
+    Misc     = Window:AddTab({ Title = "Misc",     Icon = "list" }),
 }
 
 -- =====================================================
 -- TAB FARM
 -- =====================================================
-Tabs.Farm:AddSection("Auto Farm")
-Tabs.Farm:AddToggle("StartFarm", {
-    Title       = "Start Farm",
-    Description = "Auto Quest + Farm Level",
-    Default     = false,
-}):OnChanged(function(v) StartFarm = v end)
+Tabs.Farm:AddSection("Weapon")
+Tabs.Farm:AddDropdown("SelectWeapon", {Title = "Select Weapon", Values = {"Melee", "Sword", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedWeapon = v end)
+
+Tabs.Farm:AddSection("Auto Farm Quest")
+Tabs.Farm:AddToggle("StartFarm", {Title = "Start Farm", Description = "Auto Quest + Farm Level", Default = false}):OnChanged(function(v) StartFarm = v end)
+
+Tabs.Farm:AddSection("Auto Farm Đặc Biệt")
+Tabs.Farm:AddToggle("AutoFarmBone", {Title = "Auto Farm Bone", Default = false}):OnChanged(function(v) AutoFarmBone = v; if v then AutoFarmCake = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end end)
+Tabs.Farm:AddToggle("AutoFarmCake", {Title = "Auto Farm Cake", Default = false}):OnChanged(function(v) AutoFarmCake = v; if v then AutoFarmBone = false; AutoFarmCakeQuest = false; AutoFarmKatakuri = false end end)
+Tabs.Farm:AddToggle("AutoFarmCakeQuest", {Title = "Auto Farm Cake (Quest)", Default = false}):OnChanged(function(v) AutoFarmCakeQuest = v; if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmKatakuri = false end end)
+Tabs.Farm:AddToggle("AutoFarmKatakuri", {Title = "Auto Farm Katakuri", Default = false}):OnChanged(function(v) AutoFarmKatakuri = v; if v then AutoFarmBone = false; AutoFarmCake = false; AutoFarmCakeQuest = false end end)
 
 -- =====================================================
--- TAB MOB
+-- TAB FRUIT
 -- =====================================================
-Tabs.Mob:AddSection("Bring Mob")
-Tabs.Mob:AddToggle("BringMob", {
-    Title       = "Bring Mob",
-    Description = "Keo quai ve 1 cho (Can bat Start Farm)",
-    Default     = false,
-}):OnChanged(function(v) BringMobEnabled = v end)
-Tabs.Mob:AddSlider("BringCount", {
-    Title = "Bring Mob Count", Min = 2, Max = 6, Rounding = 1, Default = 2,
-}):OnChanged(function(v) MaxBringCount = v end)
+Tabs.Fruit:AddSection("Auto Random Fruit")
+Tabs.Fruit:AddToggle("AutoRandomFruit", {Title = "Auto Random Fruit", Default = false}):OnChanged(function(v) AutoRandomFruitEnabled = v end)
+
+-- =====================================================
+-- TAB PLAYER
+-- =====================================================
+Tabs.Player:AddSection("Auto Stats")
+Tabs.Player:AddToggle("AutoStats", {Title = "Auto Stats", Default = false}):OnChanged(function(v) AutoStatsEnabled = v end)
+Tabs.Player:AddDropdown("SelectStat", {Title = "Select Stat", Values = {"Melee", "Defense", "Sword", "Gun", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedStat = v end)
+
+-- =====================================================
+-- TAB SETTINGS (CUỐI CÙNG - KHÔNG CÓ SLIDER COUNT)
+-- =====================================================
+Tabs.Settings:AddSection("Bring Mob (Mặc định 10 con)")
+Tabs.Settings:AddParagraph({Title = "Cách dùng", Content = "1. Bật Bring Mobs\n2. Bật Farm (bất kỳ)\n3. Tự động gom 10 con"})
+Tabs.Settings:AddToggle("BringMob", {Title = "Bring Mobs", Description = "Bật + Farm = Tự động gom 10 con", Default = false}):OnChanged(function(v) BringMobEnabled = v end)
+
+Tabs.Settings:AddDropdown("BringRange", {Title = "Bring Range", Values = {"500 studs", "800 studs", "1000 studs", "1500 studs", "2000 studs"}, Default = "500 studs", Multi = false}):OnChanged(function(v) BringMobRange = tonumber(v:match("%d+")) end)
+
+Tabs.Settings:AddDropdown("BringSpeed", {Title = "Bring Speed", Values = {"Rất Nhanh (500)", "Nhanh (400)", "Vừa (300)", "Chậm (200)", "Rất Chậm (100)"}, Default = "Vừa (300)", Multi = false}):OnChanged(function(v) 
+    if v == "Rất Nhanh (500)" then BringMobSpeed = 500
+    elseif v == "Nhanh (400)" then BringMobSpeed = 400
+    elseif v == "Vừa (300)" then BringMobSpeed = 300
+    elseif v == "Chậm (200)" then BringMobSpeed = 200
+    elseif v == "Rất Chậm (100)" then BringMobSpeed = 100
+    end
+end)
+
+Tabs.Settings:AddSection("Noclip")
+Tabs.Settings:AddParagraph({Title = "Info", Content = "Noclip tự động bật khi bay"})
 
 -- =====================================================
 -- TAB MISC
 -- =====================================================
-Tabs.Misc:AddSection("Settings")
-Tabs.Misc:AddParagraph({ Title = "Phim tat", Content = "RightShift — An/Hien UI" })
+Tabs.Misc:AddSection("Info")
+Tabs.Misc:AddParagraph({Title = "Phim tat", Content = "RightShift — An/Hien UI"})
 
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
@@ -817,97 +1396,40 @@ SaveManager:BuildConfigSection(Tabs.Misc)
 InterfaceManager:BuildInterfaceSection(Tabs.Misc)
 
 -- =====================================================
--- LOGO
--- =====================================================
-task.spawn(function()
-    task.wait(0.5)
-    local pGui = LP:WaitForChild("PlayerGui")
-    for _, gui in ipairs(pGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            for _, v in ipairs(gui:GetDescendants()) do
-                if v:IsA("TextLabel") and v.Name == "Title" then
-                    local logo = Instance.new("ImageLabel")
-                    logo.Image = "rbxassetid://93384558628762"
-                    logo.Size = UDim2.new(0, 24, 0, 24)
-                    logo.Position = UDim2.new(0, -30, 0.5, -12)
-                    logo.BackgroundTransparency = 1
-                    local logoCorner = Instance.new("UICorner"); logoCorner.CornerRadius = UDim.new(1, 0); logoCorner.Parent = logo
-                    logo.ZIndex = 10; logo.Parent = v.Parent
-                    break
-                end
-            end
-        end
-    end
-end)
-
--- =====================================================
--- FLOATING TOGGLE BUTTON
+-- FLOATING BUTTON
 -- =====================================================
 local screenGui = Instance.new("ScreenGui", game.CoreGui)
 screenGui.Name = "ControlGUI"
-
 local toggleButton = Instance.new("ImageButton", screenGui)
-toggleButton.Size = UDim2.new(0, 50, 0, 50)
-toggleButton.Position = UDim2.new(0.02, 0, 0.22, 0)
-toggleButton.Image = "rbxassetid://93384558628762"
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(0.02, 0, 0.15, 0)
+toggleButton.Image = "rbxassetid://100206144433004"
 toggleButton.BackgroundTransparency = 1
-toggleButton.Active = true
-toggleButton.Draggable = false
+toggleButton.Active = true; toggleButton.Draggable = false
+local btnCorner = Instance.new("UICorner"); btnCorner.CornerRadius = UDim.new(1, 0); btnCorner.Parent = toggleButton
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(1, 0)
-btnCorner.Parent = toggleButton
-
-local dragging = false
-local dragInput = nil
-local dragStart = nil
-local startPos = nil
-
+local dragging = false; local dragInput = nil; local dragStart = nil; local startPos = nil
 toggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = toggleButton.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = toggleButton.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
-
 toggleButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-    or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        toggleButton.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
+        toggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
-
-toggleButton.MouseButton1Click:Connect(function()
-    Window:Minimize()
-end)
+toggleButton.MouseButton1Click:Connect(function() Window:Minimize() end)
 
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Fast Attack: ON (0.05s) | Auto Quest: Ready | Bring Mob: Ready | Floating Button: Added") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Kitsune M1: ON | Auto Click M1: ON | Fast Attack: ON | Bring Mob: 10 Mobs | Noclip: ON") 
