@@ -91,7 +91,7 @@ end)
 print("[Vexz Hub] Auto Buso Haki enabled")
 
 -- =====================================================
--- SELECT WEAPON
+-- SELECT WEAPON + AUTO REEQUIP KHI CHẾT
 -- =====================================================
 local SelectedWeapon = "Melee"
 
@@ -117,6 +117,13 @@ local function equipWeapon()
         end
     end
 end
+
+-- Tự động trang bị lại vũ khí khi nhân vật chết/respawn
+LP.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    equipWeapon()
+end)
+
 print("[Vexz Hub] Auto Equip Weapon ready")
 
 -- =====================================================
@@ -367,17 +374,7 @@ task.spawn(function()
                         tool:Activate()
                     end
                 else
-                    local backpack = LP.Backpack
-                    local meleeTool = nil
-                    for _, t in ipairs(backpack:GetChildren()) do
-                        if t:IsA("Tool") and t.ToolTip == "Melee" then
-                            meleeTool = t
-                            break
-                        end
-                    end
-                    if meleeTool then
-                        hum:EquipTool(meleeTool)
-                    end
+                    equipWeapon()
                 end
             end
         end)
@@ -764,7 +761,6 @@ end
 -- =====================================================
 local StartFarm = false
 local BringMobEnabled = false
-local MaxBringCount = 10
 local BringMobRange = 500
 local BringMobSpeed = 300
 local FarmPos = nil
@@ -1169,7 +1165,7 @@ end)
 print("[Vexz Hub] Auto Farm Bone/Cake/Katakuri ready")
 
 -- =====================================================
--- BRING MOB (FIX: distToFarm > 3)
+-- BRING MOB (FIX: distToFarm > 3, 10 CON, KHÔNG SLIDER)
 -- =====================================================
 task.spawn(function()
     while task.wait(0.1) do
@@ -1213,7 +1209,7 @@ task.spawn(function()
             
             local brought = 0
             for _, v in ipairs(workspace.Enemies:GetChildren()) do
-                if brought >= MaxBringCount then break end
+                if brought >= 10 then break end
                 if not v:IsA("Model") then continue end
                 local hum = v:FindFirstChild("Humanoid")
                 local hrp = v:FindFirstChild("HumanoidRootPart")
@@ -1363,11 +1359,11 @@ Tabs.Player:AddToggle("AutoStats", {Title = "Auto Stats", Default = false}):OnCh
 Tabs.Player:AddDropdown("SelectStat", {Title = "Select Stat", Values = {"Melee", "Defense", "Sword", "Gun", "Blox Fruit"}, Default = "Melee", Multi = false}):OnChanged(function(v) SelectedStat = v end)
 
 -- =====================================================
--- TAB SETTINGS
+-- TAB SETTINGS (KHÔNG SLIDER COUNT)
 -- =====================================================
-Tabs.Settings:AddSection("Bring Mob")
+Tabs.Settings:AddSection("Bring Mob (Mặc định 10 con)")
+Tabs.Settings:AddParagraph({Title = "Cách dùng", Content = "1. Bật Bring Mobs\n2. Bật Farm\n3. Tự động gom 10 con"})
 Tabs.Settings:AddToggle("BringMob", {Title = "Bring Mobs", Default = false}):OnChanged(function(v) BringMobEnabled = v end)
-Tabs.Settings:AddSlider("BringCount", {Title = "Count", Min = 1, Max = 10, Default = 10, Rounding = 1}):OnChanged(function(v) MaxBringCount = v end)
 Tabs.Settings:AddDropdown("BringRange", {Title = "Bring Range", Values = {"500 studs", "800 studs", "1000 studs", "1500 studs", "2000 studs"}, Default = "500 studs", Multi = false}):OnChanged(function(v) BringMobRange = tonumber(v:match("%d+")) end)
 Tabs.Settings:AddDropdown("BringSpeed", {Title = "Bring Speed", Values = {"Rất Nhanh (500)", "Nhanh (400)", "Vừa (300)", "Chậm (200)", "Rất Chậm (100)"}, Default = "Vừa (300)", Multi = false}):OnChanged(function(v) 
     if v == "Rất Nhanh (500)" then BringMobSpeed = 500
@@ -1431,4 +1427,4 @@ toggleButton.MouseButton1Click:Connect(function() Window:Minimize() end)
 SaveManager:LoadAutoloadConfig()
 Window:SelectTab(1)
 
-print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Kitsune M1: ON | Auto Click M1: ON | Fast Attack: ON | Bring Mob: FIXED | Noclip: ON") 
+print("[Vexz Hub] Loaded! Anti AFK: ON | Auto Buso: ON | Kitsune M1: ON | Auto Click M1: ON | Fast Attack: ON | Bring Mob: 10 Mobs | Noclip: ON") 
